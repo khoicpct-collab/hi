@@ -1,872 +1,936 @@
-<div class="max-w-7xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10">
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô Phỏng Dòng Chảy Vật Liệu</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <style>
+        /* Nền chính trắng tuyết (Snow White) */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff; /* Trắng tinh khiết */
+        }
+        /* Đảm bảo con trỏ chuột là bút vẽ khi di chuột qua canvas */
+        #simulationCanvas.drawing-mode {
+            cursor: crosshair;
+        }
+        #simulationCanvas.edit-mode {
+             cursor: grab;
+        }
+        #simulationCanvas.grabbing {
+             cursor: grabbing; 
+        }
+        #simulationCanvas:not(.drawing-mode):not(.edit-mode) {
+             cursor: default;
+        }
+        /* Style cho thanh trượt tốc độ và cường độ */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%; 
+            background: #1d4ed8; /* Blue-700 */
+            cursor: pointer;
+            box-shadow: 0 0 2px rgba(0,0,0,0.3);
+        }
+        /* Style cho Modal */
+        .modal {
+            transition: opacity 0.25s ease;
+        }
+        /* Style cho Header Image */
+        .header-image {
+            height: 300px; /* Chiều cao cố định cho header */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+        }
+    </style>
+    <!-- CDN cho thư viện gif.js để tạo GIF -->
+    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/gif.js"></script>
+</head>
+<body class="min-h-screen">
     
-    <!-- TIÊU ĐỀ CHUYÊN NGHIỆP VÀ THANH LỊCH -->
-    <h1 class="text-4xl font-extrabold mb-4 text-center tracking-wider text-gray-800">
-        Công Cụ Mô Phỏng Dòng Chảy Vật Liệu 2D
-    </h1>
-    <p class="text-xl font-semibold text-gray-700 mb-8 text-center border-b pb-4">Tạo và Tinh Chỉnh Vùng Mô Phỏng Chính Xác</p>
-    
-    <!-- HƯỚNG DẪN VÀ THAO TÁC CHÍNH -->
-    <div class="flex flex-col lg:flex-row gap-6 mb-6">
+    <!-- HEADER BÃI BIỂN XANH THẲM (Safe Content) -->
+    <header class="header-image shadow-xl" style="background-image: url('https://placehold.co/1200x300/06b6d4/ffffff?text=Bãi+Biển+Xanh+Thẳm+Thiên+Nhiên+Tuyệt+Đẹp');">
+        <!-- Overlay mờ để chữ dễ đọc hơn -->
+        <div class="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+            <h1 class="text-5xl font-extrabold text-white text-center tracking-widest drop-shadow-lg">
+                HỆ THỐNG PHÂN TÍCH DÒNG CHẢY
+            </h1>
+        </div>
+    </header>
+
+    <!-- CONTAINER CHÍNH CỦA ỨNG DỤNG -->
+    <div class="max-w-7xl mx-auto -mt-16 relative z-10 bg-white shadow-2xl rounded-xl p-6 md:p-10 mb-8 border-t-4 border-blue-600">
         
-        <!-- CỘT BẢN VẼ & VẬT LIỆU -->
-        <div class="lg:w-1/3 space-y-4">
-            <p class="text-2xl font-bold text-gray-800 border-b pb-2">Thiết Lập Hình Ảnh</p>
+        <!-- TIÊU ĐỀ CHUYÊN NGHIỆP VÀ THANH LỊCH -->
+        <h2 class="text-3xl font-bold mb-4 text-center tracking-wide text-gray-800">
+            Công Cụ Mô Phỏng Dòng Chảy Vật Liệu 2D
+        </h2>
+        <p class="text-lg font-medium text-gray-600 mb-8 text-center border-b pb-4">Tạo và Tinh Chỉnh Vùng Mô Phỏng Chính Xác</p>
+        
+        <!-- HƯỚNG DẪN VÀ THAO TÁC CHÍNH -->
+        <div class="flex flex-col lg:flex-row gap-6 mb-6">
             
-            <div class="p-4 border rounded-lg bg-gray-50">
-                <label for="baseImageUpload" class="block text-lg font-medium text-gray-700 mb-1">1. Bản Vẽ Nền (Thiết bị)</label>
-                <input type="file" id="baseImageUpload" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100">
+            <!-- CỘT BẢN VẼ & VẬT LIỆU -->
+            <div class="lg:w-1/3 space-y-4">
+                <p class="text-2xl font-bold text-gray-800 border-b pb-2">Thiết Lập Hình Ảnh</p>
+                
+                <div class="p-4 border rounded-lg bg-gray-50">
+                    <label for="baseImageUpload" class="block text-lg font-medium text-gray-700 mb-1">1. Bản Vẽ Nền (Thiết bị)</label>
+                    <input type="file" id="baseImageUpload" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                </div>
+
+                <div class="p-4 border rounded-lg bg-gray-50">
+                    <label for="materialImageUpload" class="block text-lg font-medium text-gray-700 mb-1">2. Ảnh Vật Liệu (Tối ưu 32x32px)</label>
+                    <input type="file" id="materialImageUpload" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                </div>
+
+                <button onclick="openModal('helpModal')" class="w-full py-3 px-6 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 transition duration-150">
+                    ? Hướng Dẫn Sử Dụng Chi Tiết
+                </button>
             </div>
 
-            <div class="p-4 border rounded-lg bg-gray-50">
-                <label for="materialImageUpload" class="block text-lg font-medium text-gray-700 mb-1">2. Ảnh Vật Liệu (Tối ưu 32x32px)</label>
-                <input type="file" id="materialImageUpload" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100">
-            </div>
+            <!-- CỘT ĐIỀU KHIỂN DÒNG CHẢY -->
+            <div class="lg:w-2/3 space-y-4">
+                <p class="text-2xl font-bold text-gray-800 border-b pb-2">Điều Khiển & Thao Tác</p>
 
-            <button onclick="openModal('helpModal')" class="w-full py-3 px-6 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 transition duration-150">
-                ? Hướng Dẫn Sử Dụng Chi Tiết
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <!-- Tốc độ -->
+                    <div class="p-4 border rounded-lg bg-gray-100 space-y-2">
+                        <label for="speedControl" class="block text-lg font-semibold text-gray-700">Tốc Độ:</label>
+                        <input type="range" id="speedControl" min="1" max="15" value="5" step="1" class="w-full h-2 bg-gray-400 rounded-lg appearance-none cursor-pointer">
+                        <span id="speedValue" class="text-sm font-bold text-blue-600 block text-right">5</span>
+                    </div>
+
+                    <!-- Cường độ (Opacity) -->
+                    <div class="p-4 border rounded-lg bg-gray-100 space-y-2">
+                        <label for="intensityControl" class="block text-lg font-semibold text-gray-700">Cường Độ (Độ Đậm):</label>
+                        <input type="range" id="intensityControl" min="0.1" max="1.0" value="0.7" step="0.05" class="w-full h-2 bg-gray-400 rounded-lg appearance-none cursor-pointer">
+                        <span id="intensityValue" class="text-sm font-bold text-indigo-600 block text-right">70%</span>
+                    </div>
+                    
+                    <!-- Độ dày nét vẽ -->
+                    <div class="p-4 border rounded-lg bg-gray-100 space-y-2">
+                        <label for="drawThicknessControl" class="block text-lg font-semibold text-gray-700">Độ Dày Nét Vẽ (Path):</label>
+                        <input type="range" id="drawThicknessControl" min="1" max="10" value="3" step="1" class="w-full h-2 bg-gray-400 rounded-lg appearance-none cursor-pointer">
+                        <span id="drawThicknessValue" class="text-sm font-bold text-teal-600 block text-right">3 px</span>
+                    </div>
+                </div>
+
+                <!-- Điều khiển Vẽ, Chỉnh sửa và Mô phỏng -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <button id="addPathButton" disabled class="py-3 px-2 bg-yellow-500 text-white font-bold rounded-lg shadow-lg hover:bg-yellow-600 transition duration-150 disabled:bg-gray-400 text-sm md:text-base">
+                        + Thêm Vùng Mô Phỏng
+                    </button>
+                    <button id="editPathButton" disabled class="py-3 px-2 bg-pink-500 text-white font-bold rounded-lg shadow-lg hover:bg-pink-600 transition duration-150 disabled:bg-gray-400 text-sm md:text-base">
+                        Chọn/Chỉnh Sửa Vùng Vẽ
+                    </button>
+                    <button id="resetPaths" class="py-3 px-2 bg-red-500 text-white font-bold rounded-lg shadow-lg hover:bg-red-600 transition duration-150 text-sm md:text-base">
+                        Xóa TOÀN BỘ Vùng
+                    </button>
+                    <button id="startStopSim" disabled class="py-3 px-2 bg-green-500 text-white font-bold rounded-lg shadow-lg hover:bg-green-600 transition duration-150 disabled:bg-gray-400 text-sm md:text-base">
+                        BẮT ĐẦU Mô Phỏng
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Khu vực Canvas -->
+        <div class="relative mb-6 border-4 border-dashed border-gray-300 rounded-lg overflow-hidden flex justify-center items-center" style="min-height: 450px; height: 65vh;">
+            <canvas id="simulationCanvas" class="absolute inset-0 w-full h-full"></canvas>
+            <div id="placeholderText" class="absolute text-gray-500 text-xl text-center p-4">
+                1. Tải lên Bản Vẽ Nền để bắt đầu.
+            </div>
+        </div>
+
+        <!-- Khu vực Xuất file -->
+        <div class="flex justify-center">
+            <button id="generateGif" disabled class="w-full sm:w-1/2 py-3 px-6 bg-purple-600 text-white font-bold rounded-lg shadow-xl hover:bg-purple-700 transition duration-150 disabled:bg-gray-400">
+                Tạo Tệp GIF (Xuất Video 5s)
             </button>
         </div>
 
-        <!-- CỘT ĐIỀU KHIỂN DÒNG CHẢY -->
-        <div class="lg:w-2/3 space-y-4">
-            <p class="text-2xl font-bold text-gray-800 border-b pb-2">Điều Khiển & Thao Tác</p>
+        <!-- Thông báo Trạng thái -->
+        <div id="statusMessage" class="mt-4 text-center text-sm font-semibold text-blue-700 h-6">Vui lòng tải lên ảnh nền để bắt đầu.</div>
+        
+        <!-- Khu vực Xem trước GIF -->
+        <div id="gifPreviewArea" class="mt-8 text-center hidden">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Xem Trước GIF Đã Xuất</h2>
+            <img id="gifPreview" class="max-w-full h-auto mx-auto rounded-lg shadow-2xl border-4 border-gray-200" alt="Xem trước ảnh GIF">
+            <a id="gifDownloadLink" download="material_flow_simulation.gif" class="mt-4 inline-block py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-150">
+                Tải Xuống GIF
+            </a>
+        </div>
+    </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <!-- Tốc độ -->
-                <div class="p-4 border rounded-lg bg-gray-100 space-y-2">
-                    <label for="speedControl" class="block text-lg font-semibold text-gray-700">Tốc Độ:</label>
-                    <input type="range" id="speedControl" min="1" max="15" value="5" step="1" class="w-full h-2 bg-gray-400 rounded-lg appearance-none cursor-pointer">
-                    <span id="speedValue" class="text-sm font-bold text-blue-600 block text-right">5</span>
-                </div>
-
-                <!-- Cường độ (Opacity) -->
-                <div class="p-4 border rounded-lg bg-gray-100 space-y-2">
-                    <label for="intensityControl" class="block text-lg font-semibold text-gray-700">Cường Độ (Độ Đậm):</label>
-                    <input type="range" id="intensityControl" min="0.1" max="1.0" value="0.7" step="0.05" class="w-full h-2 bg-gray-400 rounded-lg appearance-none cursor-pointer">
-                    <span id="intensityValue" class="text-sm font-bold text-indigo-600 block text-right">70%</span>
-                </div>
-                
-                <!-- Độ dày nét vẽ -->
-                <div class="p-4 border rounded-lg bg-gray-100 space-y-2">
-                    <label for="drawThicknessControl" class="block text-lg font-semibold text-gray-700">Độ Dày Nét Vẽ (Path):</label>
-                    <input type="range" id="drawThicknessControl" min="1" max="10" value="3" step="1" class="w-full h-2 bg-gray-400 rounded-lg appearance-none cursor-pointer">
-                    <span id="drawThicknessValue" class="text-sm font-bold text-teal-600 block text-right">3 px</span>
-                </div>
-            </div>
-
-            <!-- Điều khiển Vẽ, Chỉnh sửa và Mô phỏng -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <button id="addPathButton" disabled class="py-3 px-2 bg-yellow-500 text-white font-bold rounded-lg shadow-lg hover:bg-yellow-600 transition duration-150 disabled:bg-gray-400 text-sm md:text-base">
-                    + Thêm Vùng Mô Phỏng
-                </button>
-                <button id="editPathButton" disabled class="py-3 px-2 bg-pink-500 text-white font-bold rounded-lg shadow-lg hover:bg-pink-600 transition duration-150 disabled:bg-gray-400 text-sm md:text-base">
-                    Chọn/Chỉnh Sửa Vùng Vẽ
-                </button>
-                <button id="resetPaths" class="py-3 px-2 bg-red-500 text-white font-bold rounded-lg shadow-lg hover:bg-red-600 transition duration-150 text-sm md:text-base">
-                    Xóa TOÀN BỘ Vùng
-                </button>
-                <button id="startStopSim" disabled class="py-3 px-2 bg-green-500 text-white font-bold rounded-lg shadow-lg hover:bg-green-600 transition duration-150 disabled:bg-gray-400 text-sm md:text-base">
-                    BẮT ĐẦU Mô Phỏng
-                </button>
+    <!-- MODAL HƯỚNG DẪN SỬ DỤNG (Nội dung giữ nguyên) -->
+    <div id="helpModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 opacity-0 pointer-events-none">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 md:w-2/3 max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-95">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Hướng Dẫn Sử Dụng Công Cụ Mô Phỏng Dòng Chảy</h3>
+            <ol class="list-decimal list-inside space-y-3 text-gray-700">
+                <li>**Tải Ảnh Nền & Vật Liệu:** Tải lên bản vẽ thiết bị và hình ảnh vật liệu.</li>
+                <li>**Thêm Vùng Mô Phỏng:** Nhấn nút **"+ Thêm Vùng Mô Phỏng Mới"**. Con trỏ chuột chuyển thành dấu cộng. **Vẽ chỉ bắt đầu khi bạn Nhấn và Giữ chuột/ngón tay** trên canvas. Nhả chuột để kết thúc vùng vẽ.</li>
+                <li>**Chỉnh Sửa (MỚI - Rất Quan Trọng):**
+                    <ul class="list-disc list-inside ml-5">
+                        <li>Nhấn **"Chọn/Chỉnh Sửa Vùng Vẽ"** để vào chế độ chỉnh sửa.</li>
+                        <li>Các điểm neo (nodes) nhỏ màu xanh lá cây sẽ xuất hiện trên đường Path.</li>
+                        <li>**Kéo và Thả** các điểm neo này để uốn cong và tinh chỉnh đường đi chính xác theo ý muốn của bạn (giống Powerpoint Edit Point).</li>
+                        <li>Nhấn lại nút **"Xong (Thoát Chỉnh Sửa)"** để thoát chế độ.</li>
+                    </ul>
+                </li>
+                <li>**Tùy Chỉnh:** Điều chỉnh Tốc Độ, Cường Độ và Độ Dày Nét Vẽ (độ dày này chỉ áp dụng cho lần vẽ path mới).</li>
+                <li>**Chạy & Xuất File:** Nhấn **"BẮT ĐẦU Mô Phỏng"** để xem hiệu ứng, và **"Tạo Tệp GIF"** để xuất video.</li>
+            </ol>
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeModal('helpModal')" class="py-2 px-4 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 transition">Đóng</button>
             </div>
         </div>
     </div>
 
-    <!-- Khu vực Canvas -->
-    <div class="relative mb-6 border-4 border-dashed border-gray-300 rounded-lg overflow-hidden flex justify-center items-center" style="min-height: 450px; height: 65vh;">
-        <canvas id="simulationCanvas" class="absolute inset-0 w-full h-full"></canvas>
-        <div id="placeholderText" class="absolute text-gray-500 text-xl text-center p-4">
-            1. Tải lên Bản Vẽ Nền để bắt đầu.
-        </div>
-    </div>
+    <script>
+        // --- CÁC THIẾT LẬP BAN ĐẦU ---
+        const canvas = document.getElementById('simulationCanvas');
+        const ctx = canvas.getContext('2d');
+        const baseImageUpload = document.getElementById('baseImageUpload');
+        const materialImageUpload = document.getElementById('materialImageUpload');
+        const startStopSimButton = document.getElementById('startStopSim');
+        const generateGifButton = document.getElementById('generateGif');
+        const resetPathsButton = document.getElementById('resetPaths');
+        const addPathButton = document.getElementById('addPathButton');
+        const editPathButton = document.getElementById('editPathButton'); 
+        const statusMessage = document.getElementById('statusMessage');
+        const placeholderText = document.getElementById('placeholderText');
+        const speedControl = document.getElementById('speedControl');
+        const speedValueSpan = document.getElementById('speedValue');
+        const intensityControl = document.getElementById('intensityControl');
+        const intensityValueSpan = document.getElementById('intensityValue');
+        const drawThicknessControl = document.getElementById('drawThicknessControl');
+        const drawThicknessValueSpan = document.getElementById('drawThicknessValue');
 
-    <!-- Khu vực Xuất file -->
-    <div class="flex justify-center">
-        <button id="generateGif" disabled class="w-full sm:w-1/2 py-3 px-6 bg-purple-600 text-white font-bold rounded-lg shadow-xl hover:bg-purple-700 transition duration-150 disabled:bg-gray-400">
-            Tạo Tệp GIF (Xuất Video 5s)
-        </button>
-    </div>
+        let animationFrameId = null;
+        let isSimulating = false;
+        let isPathMode = false; 
+        let isDrawing = false;  
+        let isEditMode = false; 
+        let activeEditPoint = null; 
 
-    <!-- Thông báo Trạng thái -->
-    <div id="statusMessage" class="mt-4 text-center text-sm font-semibold text-blue-700 h-6">Vui lòng tải lên ảnh nền để bắt đầu.</div>
-    
-    <!-- Khu vực Xem trước GIF -->
-    <div id="gifPreviewArea" class="mt-8 text-center hidden">
-        <h2 class="text-2xl font-semibold mb-4 text-gray-800">Xem Trước GIF Đã Xuất</h2>
-        <img id="gifPreview" class="max-w-full h-auto mx-auto rounded-lg shadow-2xl border-4 border-gray-200" alt="Xem trước ảnh GIF">
-        <a id="gifDownloadLink" download="material_flow_simulation.gif" class="mt-4 inline-block py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-150">
-            Tải Xuống GIF
-        </a>
-    </div>
-</div>
-
-<!-- MODAL HƯỚNG DẪN SỬ DỤNG -->
-<div id="helpModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 opacity-0 pointer-events-none">
-    <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 md:w-2/3 max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-95">
-        <h3 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Hướng Dẫn Sử Dụng Công Cụ Mô Phỏng Dòng Chảy</h3>
-        <ol class="list-decimal list-inside space-y-3 text-gray-700">
-            <li>**Tải Ảnh Nền & Vật Liệu:** Tải lên bản vẽ thiết bị và hình ảnh vật liệu.</li>
-            <li>**Thêm Vùng Mô Phỏng:** Nhấn nút **"+ Thêm Vùng Mô Phỏng Mới"**. Con trỏ chuột chuyển thành dấu cộng. **Vẽ chỉ bắt đầu khi bạn Nhấn và Giữ chuột/ngón tay** trên canvas. Nhả chuột để kết thúc vùng vẽ.</li>
-            <li>**Chỉnh Sửa (MỚI - Rất Quan Trọng):**
-                <ul class="list-disc list-inside ml-5">
-                    <li>Nhấn **"Chọn/Chỉnh Sửa Vùng Vẽ"** để vào chế độ chỉnh sửa.</li>
-                    <li>Các điểm neo (nodes) nhỏ màu xanh lá cây sẽ xuất hiện trên đường Path.</li>
-                    <li>**Kéo và Thả** các điểm neo này để uốn cong và tinh chỉnh đường đi chính xác theo ý muốn của bạn (giống Powerpoint Edit Point).</li>
-                    <li>Nhấn lại nút **"Xong (Thoát Chỉnh Sửa)"** để thoát chế độ.</li>
-                </ul>
-            </li>
-            <li>**Tùy Chỉnh:** Điều chỉnh Tốc Độ, Cường Độ và Độ Dày Nét Vẽ (độ dày này chỉ áp dụng cho lần vẽ path mới).</li>
-            <li>**Chạy & Xuất File:** Nhấn **"BẮT ĐẦU Mô Phỏng"** để xem hiệu ứng, và **"Tạo Tệp GIF"** để xuất video.</li>
-        </ol>
-        <div class="mt-6 flex justify-end">
-            <button onclick="closeModal('helpModal')" class="py-2 px-4 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 transition">Đóng</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // --- CÁC THIẾT LẬP BAN ĐẦU ---
-    const canvas = document.getElementById('simulationCanvas');
-    const ctx = canvas.getContext('2d');
-    const baseImageUpload = document.getElementById('baseImageUpload');
-    const materialImageUpload = document.getElementById('materialImageUpload');
-    const startStopSimButton = document.getElementById('startStopSim');
-    const generateGifButton = document.getElementById('generateGif');
-    const resetPathsButton = document.getElementById('resetPaths');
-    const addPathButton = document.getElementById('addPathButton');
-    const editPathButton = document.getElementById('editPathButton'); // Nút mới
-    const statusMessage = document.getElementById('statusMessage');
-    const placeholderText = document.getElementById('placeholderText');
-    const speedControl = document.getElementById('speedControl');
-    const speedValueSpan = document.getElementById('speedValue');
-    const intensityControl = document.getElementById('intensityControl');
-    const intensityValueSpan = document.getElementById('intensityValue');
-    const drawThicknessControl = document.getElementById('drawThicknessControl');
-    const drawThicknessValueSpan = document.getElementById('drawThicknessValue');
-
-    let animationFrameId = null;
-    let isSimulating = false;
-    let isPathMode = false; // Sẵn sàng vẽ (chưa nhấn chuột)
-    let isDrawing = false;  // Đang giữ chuột vẽ
-    let isEditMode = false; // Mới: Chế độ chỉnh sửa điểm
-    let activeEditPoint = null; // Mới: Điểm đang được kéo
-
-    let baseImage = new Image();
-    let materialImage = new Image();
-    
-    let flowPaths = []; 
-    let currentDrawingPath = null; 
-
-    let particles = [];
-    let simTime = 0;
-    const PARTICLE_COUNT_PER_PATH = 150; 
-    const PARTICLE_SPEED_BASE = 0.0005; 
-    let currentParticleSpeed = PARTICLE_SPEED_BASE * 5; 
-    const MATERIAL_SIZE = 32; 
-    const MIN_PATH_POINTS = 50; 
-    const NODE_SIZE = 8; // Kích thước điểm neo
-    const NODE_HIT_RANGE = 12; // Vùng bắt điểm neo
-
-    let flowIntensity = 0.7; 
-    let currentDrawThickness = 3; 
-
-    // --- CÁC HÀM TIỆN ÍCH ---
-
-    /**
-     * @description Khởi tạo các thuộc tính của canvas để vừa với kích thước container
-     */
-    function resizeCanvas() {
-        const container = canvas.parentElement;
-        canvas.width = container.clientWidth;
-        canvas.height = container.clientHeight;
-        draw();
-    }
-
-    /**
-     * @description Tính khoảng cách giữa hai điểm.
-     */
-    function distance(p1, p2) {
-        return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-    }
-
-    /**
-     * @description Nội suy tuyến tính giữa hai giá trị.
-     */
-    function lerp(a, b, t) {
-        return a + (b - a) * t;
-    }
-
-    /**
-     * @description Tính toán tổng chiều dài đường đi và lưu trữ khoảng cách tích lũy cho MỘT path.
-     * @param {Object} pathObj Đối tượng path cần tính.
-     */
-    function calculatePathDistances(pathObj) {
-        if (!pathObj || pathObj.points.length < 2) return;
-
-        pathObj.distances = [0];
-        pathObj.totalLength = 0;
+        let baseImage = new Image();
+        let materialImage = new Image();
         
-        for (let i = 1; i < pathObj.points.length; i++) {
-            const dist = distance(pathObj.points[i - 1], pathObj.points[i]);
-            pathObj.totalLength += dist;
-            pathObj.distances.push(pathObj.totalLength);
-        }
-        if (pathObj.totalLength === 0 && pathObj.points.length > 0) {
-            pathObj.totalLength = 0.001;
-        }
-    }
+        let flowPaths = []; 
+        let currentDrawingPath = null; 
 
-    /**
-     * @description Lấy vị trí của hạt trên đường đi tự do bằng cách nội suy.
-     */
-    function getPositionOnPath(t, pathObj) {
-        if (pathObj.points.length < 2 || pathObj.totalLength === 0) return null;
+        let particles = [];
+        let simTime = 0;
+        const PARTICLE_COUNT_PER_PATH = 150; 
+        const PARTICLE_SPEED_BASE = 0.0005; 
+        let currentParticleSpeed = PARTICLE_SPEED_BASE * 5; 
+        const MATERIAL_SIZE = 32; 
+        const MIN_PATH_POINTS = 50; 
+        const NODE_SIZE = 8; 
+        const NODE_HIT_RANGE = 12; 
 
-        t = Math.max(0, Math.min(1, t));
-        const targetDistance = t * pathObj.totalLength;
-        
-        let startIndex = 0;
-        for (let i = 1; i < pathObj.distances.length; i++) {
-            if (pathObj.distances[i] >= targetDistance) {
-                startIndex = i - 1;
-                break;
-            }
-        }
+        let flowIntensity = 0.7; 
+        let currentDrawThickness = 3; 
 
-        if (t === 1) return pathObj.points[pathObj.points.length - 1];
+        // --- CÁC HÀM TIỆN ÍCH ---
 
-        const p1 = pathObj.points[startIndex];
-        const p2 = pathObj.points[startIndex + 1];
-
-        const dist1 = pathObj.distances[startIndex]; 
-        const segmentLength = pathObj.distances[startIndex + 1] - dist1;
-        
-        // Xử lý trường hợp segmentLength bằng 0 (điểm trùng lặp)
-        const localT = segmentLength === 0 ? 0 : (targetDistance - dist1) / segmentLength;
-
-        const x = lerp(p1.x, p2.x, localT);
-        const y = lerp(p1.y, p2.y, localT);
-        
-        return { x, y };
-    }
-
-    /**
-     * @description Khởi tạo các hạt cho một path cụ thể.
-     * @param {number} pathIndex Index của path trong mảng flowPaths.
-     */
-    function initializeParticles(pathIndex) {
-        for (let i = 0; i < PARTICLE_COUNT_PER_PATH; i++) {
-            particles.push({
-                t: Math.random(),
-                pathIndex: pathIndex, 
-                offset: Math.random() * 0.05,
-                size: lerp(0.5, 1.5, Math.random())
-            });
-        }
-    }
-
-    /**
-     * @description Cập nhật vị trí của tất cả các hạt.
-     */
-    function updateParticles() {
-        simTime += 0.01; 
-
-        particles.forEach(p => {
-            p.t += currentParticleSpeed;
-
-            if (p.t > 1) {
-                p.t = p.t - 1;
-                p.t += (Math.random() * currentParticleSpeed * 5); 
-            }
-        });
-    }
-
-    /**
-     * @description Tìm điểm neo gần vị trí click nhất (cho chế độ chỉnh sửa).
-     * @param {number} x Vị trí X của chuột.
-     * @param {number} y Vị trí Y của chuột.
-     * @returns {Object|null} {pathIndex, pointIndex} hoặc null.
-     */
-    function getClosestNode(x, y) {
-        let closest = null;
-        let minDist = NODE_HIT_RANGE; // Chỉ bắt điểm trong phạm vi này
-
-        // Lặp qua từng path
-        for (let pIndex = 0; pIndex < flowPaths.length; pIndex++) {
-            const path = flowPaths[pIndex];
-            
-            // Chỉ lấy 1/10 số điểm để giảm tải và dễ điều khiển hơn
-            // Lấy điểm đầu, cuối và các điểm giữa mỗi 10 điểm
-            for (let i = 0; i < path.points.length; i += 10) { 
-                const point = path.points[i];
-                const dist = distance(point, { x, y });
-
-                if (dist < minDist) {
-                    minDist = dist;
-                    closest = { pathIndex: pIndex, pointIndex: i };
-                }
-            }
-            
-            // Đảm bảo điểm cuối được bao gồm nếu nó không phải là điểm lặp lại
-            const lastIndex = path.points.length - 1;
-            if (lastIndex % 10 !== 0) {
-                const point = path.points[lastIndex];
-                const dist = distance(point, { x, y });
-                 if (dist < minDist) {
-                    minDist = dist;
-                    closest = { pathIndex: pIndex, pointIndex: lastIndex };
-                }
-            }
-        }
-        return closest;
-    }
-
-
-    // --- HÀM VẼ CHÍNH ---
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // 1. Vẽ hình nền
-        let drawArea = { x: 0, y: 0, w: canvas.width, h: canvas.height, offsetX: 0, offsetY: 0 };
-        if (baseImage.complete && baseImage.naturalWidth !== 0) {
-            const aspectRatio = baseImage.naturalWidth / baseImage.naturalHeight;
-            if (canvas.width / canvas.height > aspectRatio) {
-                drawArea.h = canvas.height;
-                drawArea.w = drawArea.h * aspectRatio;
-                drawArea.offsetX = (canvas.width - drawArea.w) / 2;
-            } else {
-                drawArea.w = canvas.width;
-                drawArea.h = drawArea.w / aspectRatio;
-                drawArea.offsetY = (canvas.height - drawArea.h) / 2;
-            }
-
-            ctx.drawImage(baseImage, drawArea.offsetX, drawArea.offsetY, drawArea.w, drawArea.h);
-            placeholderText.classList.add('hidden');
-            addPathButton.disabled = false;
-            editPathButton.disabled = flowPaths.length === 0;
-        } else {
-            placeholderText.classList.remove('hidden');
-            addPathButton.disabled = true;
-            editPathButton.disabled = true;
-            return;
-        }
-
-        // 2. Vẽ tất cả các đường đi đã định nghĩa (đường tham chiếu)
-        flowPaths.forEach(path => {
-            if (path.points.length > 1) {
-                ctx.strokeStyle = '#f97316'; // Màu cam
-                ctx.lineWidth = path.thickness || 3; 
-                ctx.setLineDash([]); 
-
-                ctx.beginPath();
-                ctx.moveTo(path.points[0].x, path.points[0].y);
-                
-                for (let i = 1; i < path.points.length; i++) {
-                    ctx.lineTo(path.points[i].x, path.points[i].y);
-                }
-                ctx.stroke();
-
-                // Nếu đang ở chế độ chỉnh sửa, vẽ các điểm neo
-                if (isEditMode) {
-                    // Chỉ vẽ điểm đầu, cuối và các điểm giữa mỗi 10 điểm
-                    const pointsToDraw = [];
-                    for (let i = 0; i < path.points.length; i += 10) {
-                        pointsToDraw.push({point: path.points[i], index: i});
-                    }
-                    const lastIndex = path.points.length - 1;
-                    if (lastIndex % 10 !== 0) {
-                         pointsToDraw.push({point: path.points[lastIndex], index: lastIndex});
-                    }
-
-                    pointsToDraw.forEach(({point, index}) => {
-                        ctx.fillStyle = (activeEditPoint && activeEditPoint.pathIndex === flowPaths.indexOf(path) && activeEditPoint.pointIndex === index) ? '#ef4444' : '#10b981'; // Màu đỏ khi đang kéo, xanh lá khi không
-                        ctx.beginPath();
-                        ctx.arc(point.x, point.y, NODE_SIZE / 2, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.strokeStyle = '#ffffff';
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
-                    });
-                }
-            }
-        });
-
-        // 3. VẼ HỆ THỐNG HẠT VÀ ÁP DỤNG CƯỜNG ĐỘ (OPACITY)
-        if (isSimulating) {
-            ctx.globalAlpha = flowIntensity; 
-            
-            particles.forEach(p => {
-                const pathObj = flowPaths[p.pathIndex]; 
-                if (!pathObj || pathObj.points.length < MIN_PATH_POINTS) return;
-
-                const pos = getPositionOnPath(p.t, pathObj);
-
-                if (pos) {
-                    const size = MATERIAL_SIZE * p.size;
-                    const halfSize = size / 2;
-                    // Thêm nhiễu nhẹ để mô phỏng dòng chảy tự nhiên hơn
-                    const x = pos.x - halfSize + Math.sin(p.t * 50 + simTime) * 3 * p.offset;
-                    const y = pos.y - halfSize + Math.cos(p.t * 30 + simTime) * 3 * p.offset;
-
-                    if (materialImage.complete && materialImage.naturalWidth !== 0) {
-                        ctx.drawImage(materialImage, x, y, size, size);
-                    } else {
-                        // Vẽ hình tròn mặc định nếu không có ảnh vật liệu
-                        ctx.fillStyle = '#facc15'; 
-                        ctx.beginPath();
-                        ctx.arc(pos.x, pos.y, halfSize * 0.7, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
-            });
-            
-            // Đặt lại alpha về 1.0 cho các thao tác vẽ khác
-            ctx.globalAlpha = 1.0; 
-        }
-
-        // 4. Thông báo trạng thái
-        if (isDrawing && currentDrawingPath) {
-            const pointsCount = currentDrawingPath.points.length;
-            if (pointsCount > 0) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
-                ctx.fillStyle = '#374151';
-                ctx.font = '14px Inter';
-                ctx.textAlign = 'center';
-                if (pointsCount < MIN_PATH_POINTS) {
-                    ctx.fillText(`Đang vẽ Vùng ${flowPaths.length}. Cần ${MIN_PATH_POINTS - pointsCount} điểm nữa.`, canvas.width / 2, canvas.height - 10);
-                } else {
-                     ctx.fillText(`Đã có ${pointsCount} điểm. Nhả chuột/ngón tay để xác nhận Vùng Mô Phỏng này.`, canvas.width / 2, canvas.height - 10);
-                }
-            }
-        }
-    }
-
-    /**
-     * @description Vòng lặp chính của mô phỏng.
-     */
-    function animate() {
-        if (isSimulating) {
-            updateParticles();
-        }
-        draw();
-        animationFrameId = requestAnimationFrame(animate);
-    }
-    
-    // --- XỬ LÝ SỰ KIỆN CHUỘT/CẢM ỨNG ---
-
-    // Hàm chung để lấy tọa độ chuột/touch
-    function getCoords(e) {
-        const rect = canvas.getBoundingClientRect();
-        let clientX, clientY;
-        
-        if (e.touches && e.touches.length > 0) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        } else {
-            clientX = e.clientX;
-            clientY = e.clientY;
-        }
-
-        const x = clientX - rect.left;
-        const y = clientY - rect.top;
-        return { x, y };
-    }
-
-    // --- MOUSE DOWN / TOUCH START ---
-    canvas.addEventListener('mousedown', handleStart);
-    canvas.addEventListener('touchstart', (e) => {
-         e.preventDefault(); 
-         handleStart(e);
-    }, { passive: false });
-
-    function handleStart(e) {
-        const { x, y } = getCoords(e);
-        
-        // 1. Chế độ VẼ (Drawing)
-        if (isPathMode && !isDrawing) {
-            isDrawing = true; 
-            
-            // Tạo đối tượng path mới
-            currentDrawingPath = {
-                points: [],
-                distances: [],
-                totalLength: 0,
-                thickness: currentDrawThickness 
-            };
-            flowPaths.push(currentDrawingPath);
-            
-            // Thêm điểm đầu tiên
-            currentDrawingPath.points.push({ x, y });
+        /**
+         * @description Khởi tạo các thuộc tính của canvas để vừa với kích thước container
+         */
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
             draw();
-        } 
-        // 2. Chế độ CHỈNH SỬA (Edit)
-        else if (isEditMode && flowPaths.length > 0) {
-            const node = getClosestNode(x, y);
-            if (node) {
-                activeEditPoint = node;
-                canvas.classList.add('grabbing');
-                statusMessage.textContent = `Đang kéo điểm neo Vùng ${node.pathIndex + 1}...`;
+        }
+
+        /**
+         * @description Tính khoảng cách giữa hai điểm.
+         */
+        function distance(p1, p2) {
+            return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        }
+        
+        /**
+         * @description Nội suy tuyến tính giữa hai giá trị.
+         */
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+
+        /**
+         * @description Tính toán tổng chiều dài đường đi và lưu trữ khoảng cách tích lũy cho MỘT path.
+         * @param {Object} pathObj Đối tượng path cần tính.
+         */
+        function calculatePathDistances(pathObj) {
+            if (!pathObj || pathObj.points.length < 2) return;
+
+            pathObj.distances = [0];
+            pathObj.totalLength = 0;
+            
+            for (let i = 1; i < pathObj.points.length; i++) {
+                const dist = distance(pathObj.points[i - 1], pathObj.points[i]);
+                pathObj.totalLength += dist;
+                pathObj.distances.push(pathObj.totalLength);
+            }
+            if (pathObj.totalLength === 0 && pathObj.points.length > 0) {
+                pathObj.totalLength = 0.001;
             }
         }
-    }
 
-    // --- MOUSE MOVE / TOUCH MOVE ---
-    canvas.addEventListener('mousemove', handleMove);
-    canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        handleMove(e);
-    }, { passive: false });
+        /**
+         * @description Lấy vị trí của hạt trên đường đi tự do bằng cách nội suy.
+         */
+        function getPositionOnPath(t, pathObj) {
+            if (pathObj.points.length < 2 || pathObj.totalLength === 0) return null;
 
-    function handleMove(e) {
-        const { x, y } = getCoords(e);
-        
-        // 1. Chế độ VẼ (Drawing)
-        if (isDrawing && currentDrawingPath) {
-            const lastPoint = currentDrawingPath.points[currentDrawingPath.points.length - 1];
+            t = Math.max(0, Math.min(1, t));
+            const targetDistance = t * pathObj.totalLength;
             
-            // Thêm điểm để đảm bảo đường đi mượt
-            if (!lastPoint || distance(lastPoint, { x, y }) > 1) { 
+            let startIndex = 0;
+            for (let i = 1; i < pathObj.distances.length; i++) {
+                if (pathObj.distances[i] >= targetDistance) {
+                    startIndex = i - 1;
+                    break;
+                }
+            }
+
+            if (t === 1) return pathObj.points[pathObj.points.length - 1];
+
+            const p1 = pathObj.points[startIndex];
+            const p2 = pathObj.points[startIndex + 1];
+
+            const dist1 = pathObj.distances[startIndex]; 
+            const segmentLength = pathObj.distances[startIndex + 1] - dist1;
+            
+            // Xử lý trường hợp segmentLength bằng 0 (điểm trùng lặp)
+            const localT = segmentLength === 0 ? 0 : (targetDistance - dist1) / segmentLength;
+
+            const x = lerp(p1.x, p2.x, localT);
+            const y = lerp(p1.y, p2.y, localT);
+            
+            return { x, y };
+        }
+
+        /**
+         * @description Khởi tạo các hạt cho một path cụ thể.
+         * @param {number} pathIndex Index của path trong mảng flowPaths.
+         */
+        function initializeParticles(pathIndex) {
+            for (let i = 0; i < PARTICLE_COUNT_PER_PATH; i++) {
+                particles.push({
+                    t: Math.random(),
+                    pathIndex: pathIndex, 
+                    offset: Math.random() * 0.05,
+                    size: lerp(0.5, 1.5, Math.random())
+                });
+            }
+        }
+
+        /**
+         * @description Cập nhật vị trí của tất cả các hạt.
+         */
+        function updateParticles() {
+            simTime += 0.01; 
+
+            particles.forEach(p => {
+                p.t += currentParticleSpeed;
+
+                if (p.t > 1) {
+                    p.t = p.t - 1;
+                    p.t += (Math.random() * currentParticleSpeed * 5); 
+                }
+            });
+        }
+
+        /**
+         * @description Tìm điểm neo gần vị trí click nhất (cho chế độ chỉnh sửa).
+         * @param {number} x Vị trí X của chuột.
+         * @param {number} y Vị trí Y của chuột.
+         * @returns {Object|null} {pathIndex, pointIndex} hoặc null.
+         */
+        function getClosestNode(x, y) {
+            let closest = null;
+            let minDist = NODE_HIT_RANGE; // Chỉ bắt điểm trong phạm vi này
+            const nodeSkip = 10; // Khoảng cách giữa các điểm neo có thể kéo được
+            
+            for (let pIndex = 0; pIndex < flowPaths.length; pIndex++) {
+                const path = flowPaths[pIndex];
+                
+                // Chỉ lấy 1/nodeSkip số điểm để giảm tải và dễ điều khiển hơn
+                for (let i = 0; i < path.points.length; i += nodeSkip) { 
+                    const point = path.points[i];
+                    const dist = distance(point, { x, y });
+
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closest = { pathIndex: pIndex, pointIndex: i };
+                    }
+                }
+                
+                // Đảm bảo điểm cuối được bao gồm nếu nó không phải là điểm lặp lại
+                const lastIndex = path.points.length - 1;
+                if (lastIndex % nodeSkip !== 0) {
+                    const point = path.points[lastIndex];
+                    const dist = distance(point, { x, y });
+                     if (dist < minDist) {
+                        minDist = dist;
+                        closest = { pathIndex: pIndex, pointIndex: lastIndex };
+                    }
+                }
+            }
+            return closest;
+        }
+
+
+        // --- HÀM VẼ CHÍNH ---
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Vẽ hình nền
+            let drawArea = { x: 0, y: 0, w: canvas.width, h: canvas.height, offsetX: 0, offsetY: 0 };
+            if (baseImage.complete && baseImage.naturalWidth !== 0) {
+                const aspectRatio = baseImage.naturalWidth / baseImage.naturalHeight;
+                if (canvas.width / canvas.height > aspectRatio) {
+                    drawArea.h = canvas.height;
+                    drawArea.w = drawArea.h * aspectRatio;
+                    drawArea.offsetX = (canvas.width - drawArea.w) / 2;
+                } else {
+                    drawArea.w = canvas.width;
+                    drawArea.h = drawArea.w / aspectRatio;
+                    drawArea.offsetY = (canvas.height - drawArea.h) / 2;
+                }
+
+                ctx.drawImage(baseImage, drawArea.offsetX, drawArea.offsetY, drawArea.w, drawArea.h);
+                placeholderText.classList.add('hidden');
+                addPathButton.disabled = false;
+                editPathButton.disabled = flowPaths.length === 0;
+            } else {
+                placeholderText.classList.remove('hidden');
+                addPathButton.disabled = true;
+                editPathButton.disabled = true;
+                return;
+            }
+
+            // 2. Vẽ tất cả các đường đi đã định nghĩa (đường tham chiếu)
+            flowPaths.forEach(path => {
+                if (path.points.length > 1) {
+                    ctx.strokeStyle = '#f97316'; // Màu cam
+                    ctx.lineWidth = path.thickness || 3; 
+                    ctx.setLineDash([]); 
+
+                    ctx.beginPath();
+                    ctx.moveTo(path.points[0].x, path.points[0].y);
+                    
+                    for (let i = 1; i < path.points.length; i++) {
+                        ctx.lineTo(path.points[i].x, path.points[i].y);
+                    }
+                    ctx.stroke();
+
+                    // Nếu đang ở chế độ chỉnh sửa, vẽ các điểm neo
+                    if (isEditMode) {
+                        const nodeSkip = 10;
+                        const pointsToDraw = [];
+                        
+                        // Lấy điểm đầu và các điểm cách nhau nodeSkip
+                        for (let i = 0; i < path.points.length; i += nodeSkip) {
+                            pointsToDraw.push({point: path.points[i], index: i});
+                        }
+                        // Lấy điểm cuối (nếu chưa được lấy)
+                        const lastIndex = path.points.length - 1;
+                        if (lastIndex % nodeSkip !== 0) {
+                             pointsToDraw.push({point: path.points[lastIndex], index: lastIndex});
+                        }
+
+                        pointsToDraw.forEach(({point, index}) => {
+                            // Điểm màu đỏ khi đang kéo
+                            ctx.fillStyle = (activeEditPoint && activeEditPoint.pathIndex === flowPaths.indexOf(path) && activeEditPoint.pointIndex === index) ? '#ef4444' : '#10b981'; // Xanh lá
+                            ctx.beginPath();
+                            ctx.arc(point.x, point.y, NODE_SIZE / 2, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        });
+                    }
+                }
+            });
+
+            // 3. VẼ HỆ THỐNG HẠT VÀ ÁP DỤNG CƯỜNG ĐỘ (OPACITY)
+            if (isSimulating) {
+                ctx.globalAlpha = flowIntensity; 
+                
+                particles.forEach(p => {
+                    const pathObj = flowPaths[p.pathIndex]; 
+                    if (!pathObj || pathObj.points.length < MIN_PATH_POINTS) return;
+
+                    const pos = getPositionOnPath(p.t, pathObj);
+
+                    if (pos) {
+                        const size = MATERIAL_SIZE * p.size;
+                        const halfSize = size / 2;
+                        // Thêm nhiễu nhẹ để mô phỏng dòng chảy tự nhiên hơn
+                        const x = pos.x - halfSize + Math.sin(p.t * 50 + simTime) * 3 * p.offset;
+                        const y = pos.y - halfSize + Math.cos(p.t * 30 + simTime) * 3 * p.offset;
+
+                        if (materialImage.complete && materialImage.naturalWidth !== 0) {
+                            ctx.drawImage(materialImage, x, y, size, size);
+                        } else {
+                            // Vẽ hình tròn mặc định nếu không có ảnh vật liệu
+                            ctx.fillStyle = '#facc15'; 
+                            ctx.beginPath();
+                            ctx.arc(pos.x, pos.y, halfSize * 0.7, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                });
+                
+                // Đặt lại alpha về 1.0 cho các thao tác vẽ khác
+                ctx.globalAlpha = 1.0; 
+            }
+
+            // 4. Thông báo trạng thái
+            if (isDrawing && currentDrawingPath) {
+                const pointsCount = currentDrawingPath.points.length;
+                if (pointsCount > 0) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
+                    ctx.fillStyle = '#374151';
+                    ctx.font = '14px Inter';
+                    ctx.textAlign = 'center';
+                    if (pointsCount < MIN_PATH_POINTS) {
+                        ctx.fillText(`Đang vẽ Vùng ${flowPaths.length}. Cần ${MIN_PATH_POINTS - pointsCount} điểm nữa.`, canvas.width / 2, canvas.height - 10);
+                    } else {
+                         ctx.fillText(`Đã có ${pointsCount} điểm. Nhả chuột/ngón tay để xác nhận Vùng Mô Phỏng này.`, canvas.width / 2, canvas.height - 10);
+                    }
+                }
+            }
+        }
+
+        /**
+         * @description Vòng lặp chính của mô phỏng.
+         */
+        function animate() {
+            if (isSimulating) {
+                updateParticles();
+            }
+            draw();
+            animationFrameId = requestAnimationFrame(animate);
+        }
+        
+        // --- XỬ LÝ SỰ KIỆN CHUỘT/CẢM ỨNG ---
+
+        // Hàm chung để lấy tọa độ chuột/touch
+        function getCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+            
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            return { x, y };
+        }
+
+        // --- MOUSE DOWN / TOUCH START ---
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('touchstart', (e) => {
+             e.preventDefault(); 
+             handleStart(e);
+        }, { passive: false });
+
+        function handleStart(e) {
+            const { x, y } = getCoords(e);
+            
+            // 1. Chế độ VẼ (Drawing)
+            if (isPathMode && !isDrawing) {
+                isDrawing = true; 
+                
+                currentDrawingPath = {
+                    points: [],
+                    distances: [],
+                    totalLength: 0,
+                    thickness: currentDrawThickness 
+                };
+                flowPaths.push(currentDrawingPath);
+                
                 currentDrawingPath.points.push({ x, y });
+                draw();
+            } 
+            // 2. Chế độ CHỈNH SỬA (Edit)
+            else if (isEditMode && flowPaths.length > 0) {
+                const node = getClosestNode(x, y);
+                if (node) {
+                    activeEditPoint = node;
+                    canvas.classList.add('grabbing');
+                    statusMessage.textContent = `Đang kéo điểm neo Vùng ${node.pathIndex + 1}...`;
+                }
+            }
+        }
+
+        // --- MOUSE MOVE / TOUCH MOVE ---
+        canvas.addEventListener('mousemove', handleMove);
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            handleMove(e);
+        }, { passive: false });
+
+        function handleMove(e) {
+            const { x, y } = getCoords(e);
+            
+            // 1. Chế độ VẼ (Drawing)
+            if (isDrawing && currentDrawingPath) {
+                const lastPoint = currentDrawingPath.points[currentDrawingPath.points.length - 1];
+                
+                if (!lastPoint || distance(lastPoint, { x, y }) > 1) { 
+                    currentDrawingPath.points.push({ x, y });
+                    draw();
+                }
+            }
+            // 2. Chế độ CHỈNH SỬA (Edit)
+            else if (isEditMode && activeEditPoint) {
+                const path = flowPaths[activeEditPoint.pathIndex];
+                const index = activeEditPoint.pointIndex;
+                
+                path.points[index].x = x;
+                path.points[index].y = y;
+                
+                // Kéo các điểm lân cận theo một lượng nhỏ để làm mượt đường đi
+                const range = 10;
+                for (let i = index - range; i <= index + range; i++) {
+                    if (i >= 0 && i < path.points.length && i !== index) {
+                        const weight = 1 - (Math.abs(i - index) / range); 
+                        
+                        const dx = x - path.points[i].x;
+                        const dy = y - path.points[i].y;
+                        
+                        path.points[i].x += dx * weight * 0.05; 
+                        path.points[i].y += dy * weight * 0.05;
+                    }
+                }
+                
+                // Cần tính toán lại khoảng cách sau khi di chuyển
+                calculatePathDistances(path); 
                 draw();
             }
         }
-        // 2. Chế độ CHỈNH SỬA (Edit)
-        else if (isEditMode && activeEditPoint) {
-            const path = flowPaths[activeEditPoint.pathIndex];
-            const index = activeEditPoint.pointIndex;
-            
-            // Di chuyển điểm neo
-            path.points[index].x = x;
-            path.points[index].y = y;
-            
-            // Kéo các điểm lân cận theo một lượng nhỏ để làm mượt đường đi
-            const range = 10;
-            for (let i = index - range; i <= index + range; i++) {
-                if (i >= 0 && i < path.points.length && i !== index) {
-                    const weight = 1 - (Math.abs(i - index) / range); // 1.0 ở gần index, 0.0 ở xa
+
+        // --- MOUSE UP / TOUCH END ---
+        canvas.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('touchend', handleEnd);
+
+        function handleEnd() {
+            // 1. Kết thúc VẼ (Drawing)
+            if (isDrawing && currentDrawingPath) {
+                isDrawing = false; 
+                isPathMode = false;
+                canvas.classList.remove('drawing-mode');
+                
+                calculatePathDistances(currentDrawingPath);
+                
+                if (currentDrawingPath.points.length >= MIN_PATH_POINTS) {
+                    initializeParticles(flowPaths.length - 1); 
                     
-                    const dx = x - path.points[i].x;
-                    const dy = y - path.points[i].y;
-                    
-                    // Độ kéo nhỏ (5%)
-                    path.points[i].x += dx * weight * 0.05; 
-                    path.points[i].y += dy * weight * 0.05;
+                    addPathButton.disabled = false;
+                    startStopSimButton.disabled = flowPaths.length === 0;
+                    generateGifButton.disabled = flowPaths.length === 0;
+                    editPathButton.disabled = flowPaths.length === 0;
+                    statusMessage.textContent = `Đã xác nhận Vùng ${flowPaths.length}. Nhấn 'Chỉnh sửa' để tinh chỉnh đường đi.`;
+                } else {
+                    flowPaths.pop(); 
+                    addPathButton.disabled = false; 
+                    statusMessage.textContent = `Vùng vẽ không hợp lệ (ít hơn ${MIN_PATH_POINTS} điểm). Hãy vẽ lại.`;
                 }
+                
+                currentDrawingPath = null; 
             }
             
-            // Cần tính toán lại khoảng cách sau khi di chuyển
-            calculatePathDistances(path); 
-            draw();
+            // 2. Kết thúc CHỈNH SỬA (Edit)
+            else if (isEditMode && activeEditPoint) {
+                // Tái tính toán lần cuối cho path vừa chỉnh sửa
+                calculatePathDistances(flowPaths[activeEditPoint.pathIndex]);
+                activeEditPoint = null;
+                canvas.classList.remove('grabbing');
+                statusMessage.textContent = `Đã lưu chỉnh sửa. Bạn có thể kéo điểm khác hoặc thoát chế độ.`;
+                draw();
+            }
         }
-    }
+        
+        // --- XỬ LÝ SỰ KIỆN NÚT ĐIỀU KHIỂN ---
 
-    // --- MOUSE UP / TOUCH END ---
-    canvas.addEventListener('mouseup', handleEnd);
-    canvas.addEventListener('touchend', handleEnd);
+        /**
+         * @description Bật/Tắt chế độ Vẽ.
+         */
+        function startDrawingMode() {
+            if (baseImage.naturalWidth === 0) {
+                statusMessage.textContent = "Vui lòng tải lên Bản Vẽ Nền trước.";
+                return;
+            }
+            
+            isSimulating = false;
+            isPathMode = !isPathMode; 
+            isEditMode = false; 
 
-    function handleEnd() {
-        // 1. Kết thúc VẼ (Drawing)
-        if (isDrawing && currentDrawingPath) {
-            isDrawing = false; 
-            isPathMode = false;
-            canvas.classList.remove('drawing-mode');
+            startStopSimButton.textContent = "BẮT ĐẦU Mô Phỏng";
+            editPathButton.textContent = "Chọn/Chỉnh Sửa Vùng Vẽ";
             
-            calculatePathDistances(currentDrawingPath);
-            
-            if (currentDrawingPath.points.length >= MIN_PATH_POINTS) {
-                initializeParticles(flowPaths.length - 1); 
-                
-                addPathButton.disabled = false;
+            if (isPathMode) {
+                canvas.classList.add('drawing-mode');
+                canvas.classList.remove('edit-mode');
+                statusMessage.textContent = `CHUẨN BỊ VẼ Vùng ${flowPaths.length + 1}. Nhấn và Giữ chuột để bắt đầu.`;
+                addPathButton.textContent = "Hủy Vẽ";
+                startStopSimButton.disabled = true;
+                generateGifButton.disabled = true;
+                editPathButton.disabled = true;
+            } else {
+                canvas.classList.remove('drawing-mode');
+                statusMessage.textContent = "Đã hủy vẽ. Nhấn 'Thêm Vùng Mô Phỏng' để tiếp tục.";
+                addPathButton.textContent = "+ Thêm Vùng Mô Phỏng";
                 startStopSimButton.disabled = flowPaths.length === 0;
                 generateGifButton.disabled = flowPaths.length === 0;
                 editPathButton.disabled = flowPaths.length === 0;
-                statusMessage.textContent = `Đã xác nhận Vùng ${flowPaths.length}. Nhấn 'Chỉnh sửa' để tinh chỉnh đường đi.`;
-            } else {
-                flowPaths.pop(); 
-                addPathButton.disabled = false; 
-                statusMessage.textContent = `Vùng vẽ không hợp lệ (ít hơn ${MIN_PATH_POINTS} điểm). Hãy vẽ lại.`;
             }
-            
-            currentDrawingPath = null; 
-        }
-        
-        // 2. Kết thúc CHỈNH SỬA (Edit)
-        else if (isEditMode && activeEditPoint) {
-            // Tái tính toán lần cuối cho path vừa chỉnh sửa
-            calculatePathDistances(flowPaths[activeEditPoint.pathIndex]);
-            activeEditPoint = null;
-            canvas.classList.remove('grabbing');
-            statusMessage.textContent = `Đã lưu chỉnh sửa. Bạn có thể kéo điểm khác hoặc thoát chế độ.`;
             draw();
         }
-    }
-    
-    // --- XỬ LÝ SỰ KIỆN NÚT ĐIỀU KHIỂN ---
 
-    /**
-     * @description Bật/Tắt chế độ Vẽ.
-     */
-    function startDrawingMode() {
-        if (baseImage.naturalWidth === 0) {
-            statusMessage.textContent = "Vui lòng tải lên Bản Vẽ Nền trước.";
-            return;
-        }
-        
-        isSimulating = false;
-        isPathMode = !isPathMode; // Chuyển đổi trạng thái sẵn sàng vẽ
-        isEditMode = false; // Tắt chế độ chỉnh sửa
-
-        startStopSimButton.textContent = "BẮT ĐẦU Mô Phỏng";
-        editPathButton.textContent = "Chọn/Chỉnh Sửa Vùng Vẽ";
-        
-        if (isPathMode) {
-            canvas.classList.add('drawing-mode');
-            canvas.classList.remove('edit-mode');
-            statusMessage.textContent = `CHUẨN BỊ VẼ Vùng ${flowPaths.length + 1}. Nhấn và Giữ chuột để bắt đầu.`;
-            addPathButton.textContent = "Hủy Vẽ";
-            startStopSimButton.disabled = true;
-            generateGifButton.disabled = true;
-            editPathButton.disabled = true;
-        } else {
-            canvas.classList.remove('drawing-mode');
-            statusMessage.textContent = "Đã hủy vẽ. Nhấn 'Thêm Vùng Mô Phỏng' để tiếp tục.";
-            addPathButton.textContent = "+ Thêm Vùng Mô Phỏng";
-            startStopSimButton.disabled = flowPaths.length === 0;
-            generateGifButton.disabled = flowPaths.length === 0;
-            editPathButton.disabled = flowPaths.length === 0;
-        }
-        draw();
-    }
-
-    /**
-     * @description Bật/Tắt chế độ Chỉnh sửa.
-     */
-    function toggleEditMode() {
-        if (flowPaths.length === 0) {
-            statusMessage.textContent = "Chưa có vùng vẽ nào để chỉnh sửa.";
-            return;
-        }
-
-        isSimulating = false;
-        isPathMode = false; // Tắt chế độ vẽ
-        isEditMode = !isEditMode; // Chuyển đổi trạng thái chỉnh sửa
-        activeEditPoint = null; // Đảm bảo không có điểm nào đang được chọn
-
-        startStopSimButton.textContent = "BẮT ĐẦU Mô Phỏng";
-        addPathButton.textContent = "+ Thêm Vùng Mô Phỏng";
-        addPathButton.disabled = false;
-        
-        if (isEditMode) {
-            canvas.classList.add('edit-mode');
-            canvas.classList.remove('drawing-mode');
-            editPathButton.textContent = "Xong (Thoát Chỉnh Sửa)";
-            statusMessage.textContent = "Đã vào chế độ CHỈNH SỬA ĐIỂM. Nhấn vào các chấm xanh để kéo và tinh chỉnh đường đi.";
-            startStopSimButton.disabled = true;
-            generateGifButton.disabled = true;
-        } else {
-            canvas.classList.remove('edit-mode');
-            editPathButton.textContent = "Chọn/Chỉnh Sửa Vùng Vẽ";
-            statusMessage.textContent = "Đã thoát chế độ chỉnh sửa. Bạn có thể bắt đầu mô phỏng.";
-            startStopSimButton.disabled = flowPaths.length === 0;
-            generateGifButton.disabled = flowPaths.length === 0;
-        }
-        draw();
-    }
-
-    addPathButton.addEventListener('click', startDrawingMode); 
-    editPathButton.addEventListener('click', toggleEditMode); // Sự kiện mới
-
-    resetPathsButton.addEventListener('click', () => {
-        flowPaths = [];
-        particles = [];
-        isSimulating = false;
-        isPathMode = false; 
-        isDrawing = false; 
-        isEditMode = false; // Reset chế độ chỉnh sửa
-        currentDrawingPath = null;
-        activeEditPoint = null;
-        canvas.classList.remove('drawing-mode', 'edit-mode');
-        
-        addPathButton.disabled = baseImage.naturalWidth === 0;
-        editPathButton.disabled = true;
-        startStopSimButton.disabled = true;
-        generateGifButton.disabled = true;
-
-        startStopSimButton.textContent = "BẮT ĐẦU Mô Phỏng";
-        addPathButton.textContent = "+ Thêm Vùng Mô Phỏng";
-        editPathButton.textContent = "Chọn/Chỉnh Sửa Vùng Vẽ";
-        
-        statusMessage.textContent = "Đã xóa toàn bộ vùng vẽ. Hãy thêm vùng mới.";
-        draw();
-    });
-
-    startStopSimButton.addEventListener('click', () => {
-        if (flowPaths.length === 0) {
-            statusMessage.textContent = "Vui lòng vẽ ít nhất một vùng mô phỏng hợp lệ.";
-            return;
-        }
-
-        // Thoát khỏi mọi chế độ chỉnh sửa/vẽ nếu có
-        isPathMode = false; 
-        isEditMode = false;
-        canvas.classList.remove('drawing-mode', 'edit-mode');
-        addPathButton.textContent = "+ Thêm Vùng Mô Phỏng";
-        editPathButton.textContent = "Chọn/Chỉnh Sửa Vùng Vẽ";
-
-
-        isSimulating = !isSimulating;
-        startStopSimButton.textContent = isSimulating ? "DỪNG Mô Phỏng" : "TIẾP TỤC Mô Phỏng";
-        statusMessage.textContent = isSimulating ? "Đang chạy mô phỏng..." : "Đã dừng mô phỏng.";
-    });
-
-    // 1. Tải ảnh nền
-    baseImageUpload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                baseImage.onload = () => {
-                    resizeCanvas();
-                    addPathButton.disabled = false;
-                    statusMessage.textContent = "Đã tải ảnh nền. Nhấn 'Thêm Vùng Mô Phỏng Mới' để vẽ đường đi.";
-                };
-                baseImage.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // 2. Tải ảnh vật liệu
-    materialImageUpload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                materialImage.src = event.target.result;
-                draw(); 
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // 3. Điều khiển Tốc độ
-    speedControl.addEventListener('input', (e) => {
-        const speedMultiplier = parseInt(e.target.value);
-        speedValueSpan.textContent = speedMultiplier;
-        currentParticleSpeed = PARTICLE_SPEED_BASE * speedMultiplier; 
-    });
-
-    // 4. Điều khiển Cường độ (Opacity)
-    intensityControl.addEventListener('input', (e) => {
-        flowIntensity = parseFloat(e.target.value);
-        intensityValueSpan.textContent = `${Math.round(flowIntensity * 100)}%`;
-    });
-    
-    // 5. Điều khiển Độ Dày Nét Vẽ
-    drawThicknessControl.addEventListener('input', (e) => {
-        currentDrawThickness = parseInt(e.target.value);
-        drawThicknessValueSpan.textContent = `${currentDrawThickness} px`;
-        draw(); 
-    });
-
-
-    // Cập nhật giá trị ban đầu cho các thanh trượt
-    intensityControl.dispatchEvent(new Event('input'));
-    drawThicknessControl.dispatchEvent(new Event('input'));
-
-
-    // 6. Tạo GIF
-    generateGifButton.addEventListener('click', () => {
-        if (flowPaths.length === 0) {
-            statusMessage.textContent = "Vui lòng vẽ ít nhất một vùng mô phỏng hợp lệ để tạo GIF.";
-            return;
-        }
-
-        isSimulating = false;
-        startStopSimButton.textContent = "BẮT ĐẦU Mô Phỏng";
-
-        statusMessage.textContent = "Đang tạo GIF... Vui lòng chờ (quá trình này có thể mất 15-30 giây).";
-        generateGifButton.disabled = true;
-
-        const gif = new GIF({
-            workers: 2,
-            quality: 10, 
-            width: canvas.width,
-            height: canvas.height,
-            // Worker script for GIF generation
-            workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/gif.worker.js' 
-        });
-
-        const DURATION = 5000; 
-        const FPS = 30;
-        const FRAMES_TO_CAPTURE = Math.floor((DURATION / 1000) * FPS);
-        const FRAME_DELAY = 1000 / FPS; 
-
-        // Khởi tạo lại các hạt để đảm bảo dòng chảy bắt đầu trơn tru
-        particles.forEach(p => p.t = Math.random());
-        simTime = 0;
-
-        let frameCount = 0;
-        
-        function captureFrame() {
-            if (frameCount < FRAMES_TO_CAPTURE) {
-                updateParticles();
-                draw();
-                
-                gif.addFrame(ctx, { delay: FRAME_DELAY, copy: true });
-                frameCount++;
-                
-                // Sử dụng setTimeout 0 để ưu tiên việc tạo khung hình
-                setTimeout(captureFrame, 0); 
-            } else {
-                gif.render();
+        /**
+         * @description Bật/Tắt chế độ Chỉnh sửa.
+         */
+        function toggleEditMode() {
+            if (flowPaths.length === 0) {
+                statusMessage.textContent = "Chưa có vùng vẽ nào để chỉnh sửa.";
+                return;
             }
+
+            isSimulating = false;
+            isPathMode = false; 
+            isEditMode = !isEditMode; 
+            activeEditPoint = null; 
+
+            startStopSimButton.textContent = "BẮT ĐẦU Mô Phỏng";
+            addPathButton.textContent = "+ Thêm Vùng Mô Phỏng";
+            addPathButton.disabled = false;
+            
+            if (isEditMode) {
+                canvas.classList.add('edit-mode');
+                canvas.classList.remove('drawing-mode');
+                editPathButton.textContent = "Xong (Thoát Chỉnh Sửa)";
+                statusMessage.textContent = "Đã vào chế độ CHỈNH SỬA ĐIỂM. Nhấn vào các chấm xanh để kéo và tinh chỉnh đường đi.";
+                startStopSimButton.disabled = true;
+                generateGifButton.disabled = true;
+            } else {
+                canvas.classList.remove('edit-mode');
+                editPathButton.textContent = "Chọn/Chỉnh Sửa Vùng Vẽ";
+                statusMessage.textContent = "Đã thoát chế độ chỉnh sửa. Bạn có thể bắt đầu mô phỏng.";
+                startStopSimButton.disabled = flowPaths.length === 0;
+                generateGifButton.disabled = flowPaths.length === 0;
+            }
+            draw();
         }
 
-        captureFrame();
+        addPathButton.addEventListener('click', startDrawingMode); 
+        editPathButton.addEventListener('click', toggleEditMode); 
 
-        gif.on('finished', (blob) => {
-            const url = URL.createObjectURL(blob);
-            gifPreview.src = url;
-            gifDownloadLink.href = url;
-            document.getElementById('gifPreviewArea').classList.remove('hidden');
-            statusMessage.textContent = "Tạo GIF hoàn tất! Tải xuống hoặc xem trước.";
-            generateGifButton.disabled = false;
+        resetPathsButton.addEventListener('click', () => {
+            flowPaths = [];
+            particles = [];
+            isSimulating = false;
+            isPathMode = false; 
+            isDrawing = false; 
+            isEditMode = false; 
+            currentDrawingPath = null;
+            activeEditPoint = null;
+            canvas.classList.remove('drawing-mode', 'edit-mode', 'grabbing');
+            
+            addPathButton.disabled = baseImage.naturalWidth === 0;
+            editPathButton.disabled = true;
+            startStopSimButton.disabled = true;
+            generateGifButton.disabled = true;
+
+            startStopSimButton.textContent = "BẮT ĐẦU Mô Phỏng";
+            addPathButton.textContent = "+ Thêm Vùng Mô Phỏng";
+            editPathButton.textContent = "Chọn/Chỉnh Sửa Vùng Vẽ";
+            
+            statusMessage.textContent = "Đã xóa toàn bộ vùng vẽ. Hãy thêm vùng mới.";
+            draw();
         });
 
-        gif.on('error', (error) => {
-            console.error("Lỗi khi tạo GIF:", error);
-            statusMessage.textContent = "Lỗi khi tạo GIF. Vui lòng kiểm tra console.";
-            generateGifButton.disabled = false;
+        startStopSimButton.addEventListener('click', () => {
+            if (flowPaths.length === 0) {
+                statusMessage.textContent = "Vui lòng vẽ ít nhất một vùng mô phỏng hợp lệ.";
+                return;
+            }
+
+            isPathMode = false; 
+            isEditMode = false;
+            canvas.classList.remove('drawing-mode', 'edit-mode', 'grabbing');
+            addPathButton.textContent = "+ Thêm Vùng Mô Phỏng";
+            editPathButton.textContent = "Chọn/Chỉnh Sửa Vùng Vẽ";
+
+
+            isSimulating = !isSimulating;
+            startStopSimButton.textContent = isSimulating ? "DỪNG Mô Phỏng" : "TIẾP TỤC Mô Phỏng";
+            statusMessage.textContent = isSimulating ? "Đang chạy mô phỏng..." : "Đã dừng mô phỏng.";
         });
-    });
 
-    // --- HÀM MODAL HƯỚNG DẪN ---
-    function openModal(id) {
-        const modal = document.getElementById(id);
-        modal.classList.remove('opacity-0', 'pointer-events-none');
-        modal.querySelector('div').classList.remove('scale-95');
-        modal.querySelector('div').classList.add('scale-100');
-    }
+        // 1. Tải ảnh nền
+        baseImageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    baseImage.onload = () => {
+                        resizeCanvas();
+                        addPathButton.disabled = false;
+                        statusMessage.textContent = "Đã tải ảnh nền. Nhấn 'Thêm Vùng Mô Phỏng Mới' để vẽ đường đi.";
+                    };
+                    baseImage.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
 
-    function closeModal(id) {
-        const modal = document.getElementById(id);
-        modal.querySelector('div').classList.remove('scale-100');
-        modal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => {
-            modal.classList.add('opacity-0', 'pointer-events-none');
-        }, 300);
-    }
-    
-    window.openModal = openModal;
-    window.closeModal = closeModal;
+        // 2. Tải ảnh vật liệu
+        materialImageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    materialImage.src = event.target.result;
+                    draw(); 
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 3. Điều khiển Tốc độ
+        speedControl.addEventListener('input', (e) => {
+            const speedMultiplier = parseInt(e.target.value);
+            speedValueSpan.textContent = speedMultiplier;
+            currentParticleSpeed = PARTICLE_SPEED_BASE * speedMultiplier; 
+        });
+
+        // 4. Điều khiển Cường độ (Opacity)
+        intensityControl.addEventListener('input', (e) => {
+            flowIntensity = parseFloat(e.target.value);
+            intensityValueSpan.textContent = `${Math.round(flowIntensity * 100)}%`;
+        });
+        
+        // 5. Điều khiển Độ Dày Nét Vẽ
+        drawThicknessControl.addEventListener('input', (e) => {
+            currentDrawThickness = parseInt(e.target.value);
+            drawThicknessValueSpan.textContent = `${currentDrawThickness} px`;
+            draw(); 
+        });
 
 
-    // --- KHỞI CHẠY ---
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas(); 
-    animate(); 
-</script>
+        // Cập nhật giá trị ban đầu cho các thanh trượt
+        intensityControl.dispatchEvent(new Event('input'));
+        drawThicknessControl.dispatchEvent(new Event('input'));
+
+
+        // 6. Tạo GIF
+        generateGifButton.addEventListener('click', () => {
+            if (flowPaths.length === 0) {
+                statusMessage.textContent = "Vui lòng vẽ ít nhất một vùng mô phỏng hợp lệ để tạo GIF.";
+                return;
+            }
+
+            isSimulating = false;
+            startStopSimButton.textContent = "BẮT ĐẦU Mô Phỏng";
+
+            statusMessage.textContent = "Đang tạo GIF... Vui lòng chờ (quá trình này có thể mất 15-30 giây).";
+            generateGifButton.disabled = true;
+
+            const gif = new GIF({
+                workers: 2,
+                quality: 10, 
+                width: canvas.width,
+                height: canvas.height,
+                workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/gif.worker.js' 
+            });
+
+            const DURATION = 5000; 
+            const FPS = 30;
+            const FRAMES_TO_CAPTURE = Math.floor((DURATION / 1000) * FPS);
+            const FRAME_DELAY = 1000 / FPS; 
+
+            particles.forEach(p => p.t = Math.random());
+            simTime = 0;
+
+            let frameCount = 0;
+            
+            function captureFrame() {
+                if (frameCount < FRAMES_TO_CAPTURE) {
+                    updateParticles();
+                    draw();
+                    
+                    gif.addFrame(ctx, { delay: FRAME_DELAY, copy: true });
+                    frameCount++;
+                    
+                    setTimeout(captureFrame, 0); 
+                } else {
+                    gif.render();
+                }
+            }
+
+            captureFrame();
+
+            gif.on('finished', (blob) => {
+                const url = URL.createObjectURL(blob);
+                gifPreview.src = url;
+                gifDownloadLink.href = url;
+                document.getElementById('gifPreviewArea').classList.remove('hidden');
+                statusMessage.textContent = "Tạo GIF hoàn tất! Tải xuống hoặc xem trước.";
+                generateGifButton.disabled = false;
+            });
+
+            gif.on('error', (error) => {
+                console.error("Lỗi khi tạo GIF:", error);
+                statusMessage.textContent = "Lỗi khi tạo GIF. Vui lòng kiểm tra console.";
+                generateGifButton.disabled = false;
+            });
+        });
+
+        // --- HÀM MODAL HƯỚNG DẪN ---
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('div').classList.remove('scale-95');
+            modal.querySelector('div').classList.add('scale-100');
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+            }, 300);
+        }
+        
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+
+
+        // --- KHỞI CHẠY ---
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); 
+        animate(); 
+    </script>
+</body>
+</html>
