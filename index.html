@@ -46,7 +46,7 @@
             <h1 class="text-3xl font-extrabold tracking-wider text-white">
                 XIN CHÀO VIỆT NAM
             </h1>
-            <p class="text-xs text-indigo-300 font-medium">v1.1.0</p>
+            <p class="text-xs text-indigo-300 font-medium">ve</p>
         </div>
     </div>
 
@@ -147,14 +147,14 @@
     
     <div id="helpModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 opacity-0 pointer-events-none">
         <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 md:w-1/2 max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-95">
-            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Hướng Dẫn Sử Dụng Chi Tiết (v1.1.0)</h3>
+            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Hướng Dẫn Sử Dụng Chi Tiết (v1.1.1)</h3>
             <ol class="list-decimal list-inside space-y-2 text-gray-600 text-sm">
                 <li>**Tải Ảnh Nền & Vật Liệu:** Tải lên bản vẽ thiết bị và hình ảnh vật liệu.</li>
                 <li>**Thêm Vùng Dòng Chảy (Đường Line):** Nhấn nút, **Nhấn và Giữ chuột** để vẽ đường đi tự do. Nhả chuột để kết thúc.</li>
-                <li>**Chỉnh Sửa Vùng Line (Quan trọng):** Nhấn **"Chọn/Chỉnh Sửa Vùng Vẽ (Line)"**. Kéo và Thả các **điểm neo (chấm xanh)** để uốn cong, tinh chỉnh đường đi chính xác (giống Powerpoint Edit Point). Nhấn lại nút để thoát.</li>
-                <li>**Thêm Vùng Dòng Chảy (Vector - MỚI):** Nhấn nút, sau đó chọn **Hướng** (Phải/Trái/Lên/Xuống). **Nhấn và Giữ chuột** để vẽ **Khu vực** vật liệu sẽ di chuyển. Mô phỏng này không cần đường line và chỉ áp dụng trong vùng vẽ.</li>
-                <li>**Tùy Chỉnh:** Điều chỉnh Tốc Độ, Cường Độ (Opacity - không để lại nét vẽ), và Độ Dày Nét Vẽ (chỉ áp dụng cho lần vẽ Line mới).</li>
-                <li>**Chạy & Xuất File:** Nhấn **"BẮT ĐẦU Mô Phỏng"** và **"Tạo Tệp GIF"**.</li>
+                <li>**Chỉnh Sửa Vùng Line (Quan trọng):** Nhấn **"Chọn/Chỉnh Sửa Vùng Vẽ (Line)"**. Kéo và Thả các **điểm neo (chấm xanh)** để uốn cong, tinh chỉnh đường đi chính xác. Nhấn lại nút để thoát.</li>
+                <li>**Thêm Vùng Dòng Chảy (Vector - MỚI):** Nhấn nút, sau đó chọn **Hướng** (Phải/Trái/Lên/Xuống). **Nhấn và Giữ chuột** để vẽ **Khu vực** vật liệu sẽ di chuyển.</li>
+                <li>**Tùy Chỉnh Cường Độ (Độ Đậm):** Thay đổi thanh trượt. Nếu đặt Cường Độ nhỏ hơn 100%, nét vẽ màu cam sẽ **biến mất hoàn toàn** (đã sửa lỗi) và chỉ hiển thị các hạt vật liệu.</li>
+                <li>**Chạy & Xuất File:** Nhấn **"BẮT ĐẦU Mô Phỏng"** và **"Tạo Tệp GIF"** (yêu cầu file `gif.worker.js`).</li>
             </ol>
             <div class="mt-4 text-xs italic text-gray-500">
                 Lưu ý: Chế độ Vector Field không cần đường đi cụ thể, mà mô phỏng sự di chuyển đồng bộ của vật liệu trong một vùng kín.
@@ -167,7 +167,865 @@
     
     <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/gif.js"></script>
     <script>
-        // ... (PHẦN JAVASCRIPT ĐƯỢC CẬP NHẬT Ở MỤC 2)
+        // --- CÁC THIẾT LẬP BAN ĐẦU ---
+        const canvas = document.getElementById('simulationCanvas');
+        const ctx = canvas.getContext('2d');
+        const baseImageUpload = document.getElementById('baseImageUpload');
+        const materialImageUpload = document.getElementById('materialImageUpload');
+        const startStopSimButton = document.getElementById('startStopSim');
+        const generateGifButton = document.getElementById('generateGif');
+        const resetPathsButton = document.getElementById('resetPaths');
+        const addPathButton = document.getElementById('addPathButton'); 
+        const editPathButton = document.getElementById('editPathButton'); 
+        const addVectorFieldButton = document.getElementById('addVectorFieldButton'); 
+        const vectorDirectionControl = document.getElementById('vectorDirectionControl'); 
+        const directionButtons = document.querySelectorAll('.direction-btn'); 
+
+        const statusMessage = document.getElementById('statusMessage');
+        const placeholderText = document.getElementById('placeholderText');
+        const speedControl = document.getElementById('speedControl');
+        const speedValueSpan = document.getElementById('speedValue');
+        const intensityControl = document.getElementById('intensityControl');
+        const intensityValueSpan = document.getElementById('intensityValue');
+        const drawThicknessControl = document.getElementById('drawThicknessControl');
+        const drawThicknessValueSpan = document.getElementById('drawThicknessValue');
+
+        let animationFrameId = null;
+        let isSimulating = false;
+        let isPathMode = false;     
+        let isVectorMode = false;   
+        let currentVectorDirection = null; 
+        let isDrawing = false;      
+        let isEditMode = false;     
+        let activeEditPoint = null; 
+
+        let baseImage = new Image();
+        let materialImage = new Image();
+        let flowPaths = []; 
+        let currentDrawingPath = null; 
+
+        let particles = [];
+        let simTime = 0;
+        const PARTICLE_COUNT_PER_PATH = 150;
+        const PARTICLE_SPEED_BASE = 0.0005; 
+        let currentParticleSpeed = PARTICLE_SPEED_BASE * 5; 
+        const MATERIAL_SIZE = 32; 
+        const MIN_PATH_POINTS = 50;
+        const NODE_SIZE = 8; 
+        const NODE_HIT_RANGE = 12;
+
+        let flowIntensity = 0.7; 
+        let currentDrawThickness = 3;
+
+        // --- CÁC HÀM TIỆN ÍCH ---
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            draw();
+        }
+
+        function distance(p1, p2) {
+            return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        }
+
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+
+        function calculatePathDistances(pathObj) {
+            if (pathObj.type !== 'line' || pathObj.points.length < 2) return;
+            pathObj.distances = [0];
+            pathObj.totalLength = 0;
+            
+            for (let i = 1; i < pathObj.points.length; i++) {
+                const dist = distance(pathObj.points[i - 1], pathObj.points[i]);
+                pathObj.totalLength += dist;
+                pathObj.distances.push(pathObj.totalLength);
+            }
+            if (pathObj.totalLength === 0 && pathObj.points.length > 0) {
+                pathObj.totalLength = 0.001;
+            }
+        }
+
+        function getPositionOnPath(t, pathObj) {
+            if (pathObj.points.length < 2 || pathObj.totalLength === 0) return null;
+            t = Math.max(0, Math.min(1, t));
+            const targetDistance = t * pathObj.totalLength;
+            
+            let startIndex = 0;
+            for (let i = 1; i < pathObj.distances.length; i++) {
+                if (pathObj.distances[i] >= targetDistance) {
+                    startIndex = i - 1;
+                    break;
+                }
+            }
+
+            if (t === 1) return pathObj.points[pathObj.points.length - 1];
+            const p1 = pathObj.points[startIndex];
+            const p2 = pathObj.points[startIndex + 1];
+
+            const dist1 = pathObj.distances[startIndex];
+            const segmentLength = pathObj.distances[startIndex + 1] - dist1;
+            
+            const localT = segmentLength === 0 ? 0 : (targetDistance - dist1) / segmentLength;
+
+            const x = lerp(p1.x, p2.x, localT);
+            const y = lerp(p1.y, p2.y, localT);
+            return { x, y };
+        }
+
+        /**
+         * @description Khởi tạo các hạt cho một path cụ thể.
+         */
+        function initializeParticles(pathIndex) {
+            const path = flowPaths[pathIndex];
+            if (path.type === 'line') {
+                for (let i = 0; i < PARTICLE_COUNT_PER_PATH; i++) {
+                    particles.push({
+                        t: Math.random(),
+                        pathIndex: pathIndex, 
+                        offset: Math.random() * 0.05,
+                        size: lerp(0.5, 1.5, Math.random()),
+                        type: 'line'
+                    });
+                }
+            } else if (path.type === 'vector') { 
+                const minX = Math.min(...path.points.map(p => p.x));
+                const maxX = Math.max(...path.points.map(p => p.x));
+                const minY = Math.min(...path.points.map(p => p.y));
+                const maxY = Math.max(...path.points.map(p => p.y));
+                const count = Math.floor(PARTICLE_COUNT_PER_PATH * (path.thickness / 3)); 
+                
+                for (let i = 0; i < count; i++) {
+                     let pX = lerp(minX, maxX, Math.random());
+                     let pY = lerp(minY, maxY, Math.random());
+
+                    particles.push({
+                        x: pX,
+                        y: pY,
+                        pathIndex: pathIndex,
+                        size: lerp(0.5, 1.5, Math.random()),
+                        type: 'vector',
+                        offset: Math.random() * 5 
+                    });
+                }
+            }
+        }
+
+        /**
+         * @description Cập nhật vị trí của tất cả các hạt.
+         */
+        function updateParticles() {
+            simTime += 0.01;
+            particles.forEach(p => {
+                const pathObj = flowPaths[p.pathIndex]; 
+                if (!pathObj) return;
+
+                if (p.type === 'line') {
+                    p.t += currentParticleSpeed;
+
+                    if (p.t > 1) {
+                        p.t = p.t - 1;
+                        p.t += (Math.random() * currentParticleSpeed * 5); 
+                    }
+                } else if (p.type === 'vector') {
+                    const speed = currentParticleSpeed * 50; 
+                    const bounds = pathObj.points.reduce((acc, point) => ({
+                        minX: Math.min(acc.minX, point.x),
+                        maxX: Math.max(acc.maxX, point.x),
+                        minY: Math.min(acc.minY, point.y),
+                        maxY: Math.max(acc.maxY, point.y),
+                    }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
+
+                    let dx = 0;
+                    let dy = 0;
+                    switch (pathObj.direction) {
+                        case 'right': dx = speed; break;
+                        case 'left': dx = -speed; break;
+                        case 'up': dy = -speed; break;
+                        case 'down': dy = speed; break;
+                    }
+
+                    p.x += dx + Math.sin(simTime * 10 + p.offset) * 0.5; 
+                    p.y += dy + Math.cos(simTime * 10 + p.offset) * 0.5;
+
+                    // Kiểm tra và reset vị trí 
+                    if (p.x < bounds.minX || p.x > bounds.maxX || p.y < bounds.minY || p.y > bounds.maxY) {
+                        if (dx > 0) p.x = bounds.minX;
+                        else if (dx < 0) p.x = bounds.maxX;
+                        
+                        if (dy > 0) p.y = bounds.minY;
+                        else if (dy < 0) p.y = bounds.maxY;
+                        
+                        if (dx === 0) p.x = lerp(bounds.minX, bounds.maxX, Math.random());
+                        if (dy === 0) p.y = lerp(bounds.minY, bounds.maxY, Math.random());
+                    }
+                }
+            });
+        }
+
+        function getClosestNode(x, y) {
+            let closest = null;
+            let minDist = NODE_HIT_RANGE;
+
+            for (let pIndex = 0; pIndex < flowPaths.length; pIndex++) {
+                const path = flowPaths[pIndex];
+                if (path.type !== 'line') continue; 
+                
+                for (let i = 0; i < path.points.length; i += 10) { 
+                    const point = path.points[i];
+                    const dist = distance(point, { x, y });
+
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closest = { pathIndex: pIndex, pointIndex: i };
+                    }
+                }
+                
+                const lastIndex = path.points.length - 1;
+                if (lastIndex % 10 !== 0) {
+                    const point = path.points[lastIndex];
+                    const dist = distance(point, { x, y });
+                     if (dist < minDist) {
+                        minDist = dist;
+                        closest = { pathIndex: pIndex, pointIndex: lastIndex };
+                    }
+                }
+            }
+            return closest;
+        }
+
+
+        // --- HÀM VẼ CHÍNH ---
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Vẽ hình nền
+            let drawArea = { x: 0, y: 0, w: canvas.width, h: canvas.height, offsetX: 0, offsetY: 0 };
+            if (baseImage.complete && baseImage.naturalWidth !== 0) {
+                const aspectRatio = baseImage.naturalWidth / baseImage.naturalHeight;
+                if (canvas.width / canvas.height > aspectRatio) {
+                    drawArea.h = canvas.height;
+                    drawArea.w = drawArea.h * aspectRatio;
+                    drawArea.offsetX = (canvas.width - drawArea.w) / 2;
+                } else {
+                    drawArea.w = canvas.width;
+                    drawArea.h = drawArea.w / aspectRatio;
+                    drawArea.offsetY = (canvas.height - drawArea.h) / 2;
+                }
+
+                ctx.drawImage(baseImage, drawArea.offsetX, drawArea.offsetY, drawArea.w, drawArea.h);
+                placeholderText.classList.add('hidden');
+                addPathButton.disabled = false;
+                addVectorFieldButton.disabled = false;
+                editPathButton.disabled = flowPaths.filter(p => p.type === 'line').length === 0;
+            } else {
+                placeholderText.classList.remove('hidden');
+                addPathButton.disabled = true;
+                addVectorFieldButton.disabled = true;
+                editPathButton.disabled = true;
+                return;
+            }
+
+            // 2. VẼ TẤT CẢ CÁC ĐƯỜNG ĐI ĐÃ ĐỊNH NGHĨA (ĐƯỜNG THAM CHIẾU)
+            flowPaths.forEach(path => {
+                if (path.type === 'line') {
+                    // SỬA LỖI LÀM MỜ: Chỉ vẽ Line Path nếu Opacity = 1.0 (flowIntensity)
+                    if (path.points.length > 1 && flowIntensity === 1.0) { 
+                        ctx.strokeStyle = '#f97316'; // Màu cam
+                        ctx.lineWidth = path.thickness || 3; 
+                        ctx.setLineDash([]); 
+
+                        ctx.beginPath();
+                        ctx.moveTo(path.points[0].x, path.points[0].y);
+                        
+                        for (let i = 1; i < path.points.length; i++) {
+                            ctx.lineTo(path.points[i].x, path.points[i].y);
+                        }
+                        ctx.stroke();
+                    }
+
+                    // Nếu đang ở chế độ chỉnh sửa, vẽ các điểm neo cho Line Path
+                    if (isEditMode) {
+                        const pointsToDraw = [];
+                        for (let i = 0; i < path.points.length; i += 10) {
+                            pointsToDraw.push({point: path.points[i], index: i});
+                        }
+                        const lastIndex = path.points.length - 1;
+                        if (lastIndex % 10 !== 0) {
+                             pointsToDraw.push({point: path.points[lastIndex], index: lastIndex});
+                        }
+
+                        pointsToDraw.forEach(({point, index}) => {
+                            ctx.fillStyle = (activeEditPoint && activeEditPoint.pathIndex === flowPaths.indexOf(path) && activeEditPoint.pointIndex === index) ? '#ef4444' : '#10b981'; 
+                            ctx.beginPath();
+                            ctx.arc(point.x, point.y, NODE_SIZE / 2, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        });
+                    }
+                } else if (path.type === 'vector') {
+                    // Vẽ khung của Vector Field Path
+                    if (path.points.length >= 2) {
+                        const minX = Math.min(...path.points.map(p => p.x));
+                        const maxX = Math.max(...path.points.map(p => p.x));
+                        const minY = Math.min(...path.points.map(p => p.y));
+                        const maxY = Math.max(...path.points.map(p => p.y));
+
+                        const w = maxX - minX;
+                        const h = maxY - minY;
+
+                        ctx.strokeStyle = '#06b6d4'; 
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([5, 5]); 
+                        ctx.strokeRect(minX, minY, w, h);
+                        ctx.setLineDash([]); 
+
+                        ctx.fillStyle = '#06b6d4';
+                        ctx.font = '18px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        let arrow = '';
+                        switch (path.direction) {
+                            case 'right': arrow = '➡️'; break;
+                            case 'left': arrow = '⬅️'; break;
+                            case 'up': arrow = '⬆️'; break;
+                            case 'down': arrow = '⬇️'; break;
+                        }
+                        ctx.fillText(arrow, minX + w / 2, minY + h / 2);
+                    }
+                }
+            });
+
+            // 3. VẼ HỆ THỐNG HẠT VÀ ÁP DỤNG CƯỜNG ĐỘ (OPACITY)
+            if (isSimulating) {
+                ctx.globalAlpha = flowIntensity;
+                particles.forEach(p => {
+                    const pathObj = flowPaths[p.pathIndex]; 
+                    if (!pathObj) return;
+
+                    let pos = { x: 0, y: 0 };
+                    if (p.type === 'line') {
+                        if (pathObj.points.length < MIN_PATH_POINTS) return;
+                        pos = getPositionOnPath(p.t, pathObj);
+                    } else if (p.type === 'vector') {
+                        pos = { x: p.x, y: p.y };
+                    }
+                    
+                    if (pos) {
+                        const size = MATERIAL_SIZE * p.size;
+                        const halfSize = size / 2;
+                        
+                        const noiseX = p.type === 'line' ? Math.sin(p.t * 50 + simTime) * 3 * p.offset : 0;
+                        const noiseY = p.type === 'line' ? Math.cos(p.t * 30 + simTime) * 3 * p.offset : 0;
+                        
+                        const x = pos.x - halfSize + noiseX;
+                        const y = pos.y - halfSize + noiseY;
+
+                        if (materialImage.complete && materialImage.naturalWidth !== 0) {
+                            ctx.drawImage(materialImage, x, y, size, size);
+                        } else {
+                            ctx.fillStyle = '#facc15'; 
+                            ctx.beginPath();
+                            ctx.arc(pos.x, pos.y, halfSize * 0.7, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                });
+                ctx.globalAlpha = 1.0; 
+            }
+
+            // 4. Thông báo trạng thái vẽ
+            if (isDrawing && currentDrawingPath) {
+                const pointsCount = currentDrawingPath.points.length;
+                if (pointsCount > 0) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
+                    ctx.fillStyle = '#374151';
+                    ctx.font = '14px Inter';
+                    ctx.textAlign = 'center';
+                    const typeText = currentDrawingPath.type === 'line' ? 'Đường Line' : 'Vùng Vector';
+                    if (pointsCount < MIN_PATH_POINTS && currentDrawingPath.type === 'line') {
+                        ctx.fillText(`Đang vẽ Vùng ${flowPaths.length} (${typeText}). Cần ${MIN_PATH_POINTS - pointsCount} điểm nữa.`, canvas.width / 2, canvas.height - 10);
+                    } else {
+                         ctx.fillText(`Đã có ${pointsCount} điểm. Nhả chuột/ngón tay để xác nhận Vùng Mô Phỏng (${typeText}).`, canvas.width / 2, canvas.height - 10);
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            if (isSimulating) {
+                updateParticles();
+            }
+            draw();
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        // --- XỬ LÝ SỰ KIỆN CHUỘT/CẢM ỨNG ---
+
+        function getCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+            
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            return { x, y };
+        }
+
+        // --- MOUSE DOWN / TOUCH START (ĐÃ FIX LỖI UPLOAD) ---
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('touchstart', (e) => {
+            // QUAN TRỌNG: Chỉ chặn hành vi mặc định (ngăn mở input file) nếu đang ở chế độ tương tác
+            if (isPathMode || isVectorMode || isEditMode) {
+                e.preventDefault(); 
+            }
+            handleStart(e);
+        }, { passive: false });
+        function handleStart(e) {
+            const { x, y } = getCoords(e);
+            
+            if (isPathMode && !isDrawing) {
+                isDrawing = true;
+                currentDrawingPath = {
+                    points: [],
+                    distances: [],
+                    totalLength: 0,
+                    thickness: currentDrawThickness,
+                    type: 'line'
+                };
+                flowPaths.push(currentDrawingPath);
+                currentDrawingPath.points.push({ x, y });
+                draw();
+            } 
+            else if (isVectorMode && currentVectorDirection && !isDrawing) {
+                isDrawing = true;
+                currentDrawingPath = {
+                    points: [{ x, y }], 
+                    direction: currentVectorDirection,
+                    type: 'vector',
+                    thickness: 1 
+                };
+                flowPaths.push(currentDrawingPath);
+                draw();
+            }
+            else if (isEditMode && flowPaths.length > 0) {
+                const node = getClosestNode(x, y);
+                if (node) {
+                    activeEditPoint = node;
+                    canvas.classList.add('grabbing');
+                    statusMessage.textContent = `Đang kéo điểm neo Vùng ${node.pathIndex + 1}...`;
+                }
+            }
+        }
+
+        // --- MOUSE MOVE / TOUCH MOVE (ĐÃ FIX LỖI UPLOAD) ---
+        canvas.addEventListener('mousemove', handleMove);
+        canvas.addEventListener('touchmove', (e) => {
+            // QUAN TRỌNG: Chỉ chặn hành vi cuộn mặc định nếu đang vẽ hoặc chỉnh sửa
+            if (isDrawing || isEditMode) {
+                e.preventDefault();
+            }
+            handleMove(e);
+        }, { passive: false });
+        function handleMove(e) {
+            const { x, y } = getCoords(e);
+            
+            if (isDrawing && currentDrawingPath) {
+                const lastPoint = currentDrawingPath.points[currentDrawingPath.points.length - 1];
+                
+                if (!lastPoint || distance(lastPoint, { x, y }) > 1) { 
+                    if (currentDrawingPath.type === 'line') {
+                        currentDrawingPath.points.push({ x, y });
+                    } 
+                    else if (currentDrawingPath.type === 'vector') {
+                         if (currentDrawingPath.points.length > 1) {
+                             currentDrawingPath.points.pop();
+                         }
+                         currentDrawingPath.points.push({ x, y });
+                    }
+                    draw();
+                }
+            }
+            else if (isEditMode && activeEditPoint) {
+                const path = flowPaths[activeEditPoint.pathIndex];
+                if (path.type !== 'line') return; 
+                
+                const index = activeEditPoint.pointIndex;
+                
+                path.points[index].x = x;
+                path.points[index].y = y;
+                
+                const range = 10;
+                for (let i = index - range; i <= index + range; i++) {
+                    if (i >= 0 && i < path.points.length && i !== index) {
+                        const weight = 1 - (Math.abs(i - index) / range);
+                        
+                        const dx = x - path.points[i].x;
+                        const dy = y - path.points[i].y;
+                        
+                        path.points[i].x += dx * weight * 0.05;
+                        path.points[i].y += dy * weight * 0.05;
+                    }
+                }
+                
+                calculatePathDistances(path);
+                draw();
+            }
+        }
+
+        // --- MOUSE UP / TOUCH END ---
+        canvas.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('touchend', handleEnd);
+
+        function handleEnd() {
+            if (isDrawing && currentDrawingPath) {
+                isDrawing = false;
+                
+                if (currentDrawingPath.type === 'line') {
+                    isPathMode = false;
+                    canvas.classList.remove('drawing-mode');
+                    
+                    calculatePathDistances(currentDrawingPath);
+                    
+                    if (currentDrawingPath.points.length >= MIN_PATH_POINTS) {
+                        initializeParticles(flowPaths.length - 1);
+                        statusMessage.textContent = `Đã xác nhận Vùng ${flowPaths.length} (Line). Nhấn 'Chỉnh sửa' để tinh chỉnh đường đi.`;
+                    } else {
+                        flowPaths.pop();
+                        statusMessage.textContent = `Vùng Line không hợp lệ (ít hơn ${MIN_PATH_POINTS} điểm). Hãy vẽ lại.`;
+                    }
+                } 
+                else if (currentDrawingPath.type === 'vector') {
+                    isVectorMode = false;
+                    currentVectorDirection = null;
+                    vectorDirectionControl.classList.add('hidden');
+                    canvas.classList.remove('drawing-mode');
+
+                    if (currentDrawingPath.points.length >= 2) {
+                        initializeParticles(flowPaths.length - 1);
+                        statusMessage.textContent = `Đã xác nhận Vùng ${flowPaths.length} (Vector). Hướng: ${currentDrawingPath.direction}.`;
+                    } else {
+                        flowPaths.pop();
+                        statusMessage.textContent = `Vùng Vector không hợp lệ. Hãy nhấn và giữ để vẽ một khu vực.`;
+                    }
+                }
+
+                currentDrawingPath = null;
+                updateButtonStates();
+            }
+            
+            else if (isEditMode && activeEditPoint) {
+                if (flowPaths[activeEditPoint.pathIndex].type === 'line') {
+                    calculatePathDistances(flowPaths[activeEditPoint.pathIndex]);
+                }
+                activeEditPoint = null;
+                canvas.classList.remove('grabbing');
+                statusMessage.textContent = `Đã lưu chỉnh sửa. Bạn có thể kéo điểm khác hoặc thoát chế độ.`;
+                draw();
+            }
+        }
+
+        // --- QUẢN LÝ TRẠNG THÁI NÚT ---
+
+        function updateButtonStates() {
+            const hasPaths = flowPaths.length > 0;
+            const hasLinePaths = flowPaths.filter(p => p.type === 'line').length > 0;
+
+            startStopSimButton.disabled = !hasPaths || isPathMode || isVectorMode || isEditMode;
+            generateGifButton.disabled = !hasPaths || isPathMode || isVectorMode || isEditMode;
+            
+            addPathButton.disabled = baseImage.naturalWidth === 0 || isVectorMode || isEditMode;
+            addVectorFieldButton.disabled = baseImage.naturalWidth === 0 || isPathMode || isEditMode;
+            editPathButton.disabled = !hasLinePaths || isPathMode || isVectorMode;
+
+            if (isSimulating) {
+                addPathButton.disabled = true;
+                addVectorFieldButton.disabled = true;
+                editPathButton.disabled = true;
+            }
+        }
+
+        /**
+         * @description Thoát khỏi mọi chế độ vẽ/chỉnh sửa và chuẩn bị cho thao tác khác.
+         */
+        function exitAllModes() {
+            isSimulating = false;
+            isPathMode = false;
+            isVectorMode = false;
+            isDrawing = false;
+            isEditMode = false;
+            activeEditPoint = null;
+            currentVectorDirection = null;
+            vectorDirectionControl.classList.add('hidden');
+
+            canvas.classList.remove('drawing-mode', 'edit-mode', 'grabbing');
+            startStopSimButton.textContent = "BẮT ĐẦU Mô Phỏng";
+            addPathButton.textContent = "+ Thêm Vùng Dòng Chảy (Đường Line)";
+            addVectorFieldButton.textContent = "+ Thêm Vùng Dòng Chảy (Vector)";
+            editPathButton.textContent = "Chọn/Chỉnh Sửa Vùng Vẽ (Line)";
+        }
+
+        /**
+         * @description Bật/Tắt chế độ Vẽ Line Path.
+         */
+        function toggleDrawingMode() {
+            if (baseImage.naturalWidth === 0) {
+                statusMessage.textContent = "Vui lòng tải lên Bản Vẽ Nền trước.";
+                return;
+            }
+            
+            exitAllModes();
+            isPathMode = !isPathMode; 
+
+            if (isPathMode) {
+                canvas.classList.add('drawing-mode');
+                statusMessage.textContent = `CHUẨN BỊ VẼ LINE PATH ${flowPaths.filter(p => p.type === 'line').length + 1}. Nhấn và Giữ chuột để bắt đầu.`;
+                addPathButton.textContent = "Hủy Vẽ Line";
+            } else {
+                statusMessage.textContent = "Đã hủy vẽ Line. Nhấn 'Thêm Vùng Dòng Chảy' để tiếp tục.";
+            }
+            updateButtonStates();
+            draw();
+        }
+
+        /**
+         * @description Bật/Tắt chế độ Vẽ Vector Field.
+         */
+        function toggleVectorMode() {
+            if (baseImage.naturalWidth === 0) {
+                statusMessage.textContent = "Vui lòng tải lên Bản Vẽ Nền trước.";
+                return;
+            }
+
+            exitAllModes();
+            isVectorMode = !isVectorMode;
+
+            if (isVectorMode) {
+                vectorDirectionControl.classList.remove('hidden');
+                statusMessage.textContent = "CHỌN HƯỚNG DÒNG CHẢY. Sau đó Nhấn & Giữ chuột để vẽ khu vực.";
+                addVectorFieldButton.textContent = "Hủy Vẽ Vector";
+            } else {
+                vectorDirectionControl.classList.add('hidden');
+                statusMessage.textContent = "Đã hủy vẽ Vector. Nhấn 'Thêm Vùng Dòng Chảy' để tiếp tục.";
+            }
+            updateButtonStates();
+            draw();
+        }
+
+        /**
+         * @description Bật/Tắt chế độ Chỉnh sửa Line Path.
+         */
+        function toggleEditMode() {
+            if (flowPaths.filter(p => p.type === 'line').length === 0) {
+                statusMessage.textContent = "Chưa có vùng Line nào để chỉnh sửa.";
+                return;
+            }
+
+            exitAllModes();
+            isEditMode = !isEditMode;
+
+            if (isEditMode) {
+                canvas.classList.add('edit-mode');
+                editPathButton.textContent = "Xong (Thoát Chỉnh Sửa)";
+                statusMessage.textContent = "Đã vào chế độ CHỈNH SỬA ĐIỂM (Line). Nhấn vào các chấm xanh để kéo và tinh chỉnh đường đi.";
+            } else {
+                statusMessage.textContent = "Đã thoát chế độ chỉnh sửa. Bạn có thể bắt đầu mô phỏng.";
+            }
+            updateButtonStates();
+            draw();
+        }
+
+        // --- GÁN SỰ KIỆN NÚT ---
+        addPathButton.addEventListener('click', toggleDrawingMode); 
+        editPathButton.addEventListener('click', toggleEditMode); 
+        addVectorFieldButton.addEventListener('click', toggleVectorMode);
+        
+        directionButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                directionButtons.forEach(b => b.classList.remove('bg-indigo-200'));
+                e.target.classList.add('bg-indigo-200');
+                
+                currentVectorDirection = e.target.getAttribute('data-direction');
+                canvas.classList.add('drawing-mode');
+                statusMessage.textContent = `ĐÃ CHỌN HƯỚNG ${e.target.textContent}. Nhấn và Giữ chuột để vẽ khu vực mô phỏng.`;
+            });
+        });
+
+        resetPathsButton.addEventListener('click', () => {
+            flowPaths = [];
+            particles = [];
+            exitAllModes();
+            updateButtonStates();
+            statusMessage.textContent = "Đã xóa toàn bộ vùng vẽ. Hãy thêm vùng mới.";
+            draw();
+        });
+
+        startStopSimButton.addEventListener('click', () => {
+            if (flowPaths.length === 0) {
+                statusMessage.textContent = "Vui lòng vẽ ít nhất một vùng mô phỏng hợp lệ.";
+                return;
+            }
+            
+            exitAllModes();
+
+            isSimulating = !isSimulating;
+            startStopSimButton.textContent = isSimulating ? "DỪNG Mô Phỏng" : "TIẾP TỤC Mô Phỏng";
+            statusMessage.textContent = isSimulating ? "Đang chạy mô phỏng..." : "Đã dừng mô phỏng.";
+            updateButtonStates();
+        });
+
+        // --- XỬ LÝ SỰ KIỆN TẢI ẢNH VÀ THANH TRƯỢT ---
+        baseImageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    baseImage.onload = () => {
+                        resizeCanvas();
+                        updateButtonStates();
+                        statusMessage.textContent = "Đã tải ảnh nền. Nhấn '+ Thêm Vùng Dòng Chảy' để vẽ đường đi.";
+                    };
+                    baseImage.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        materialImageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    materialImage.src = event.target.result;
+                    draw(); 
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        speedControl.addEventListener('input', (e) => {
+            const speedMultiplier = parseInt(e.target.value);
+            speedValueSpan.textContent = speedMultiplier;
+            currentParticleSpeed = PARTICLE_SPEED_BASE * speedMultiplier; 
+        });
+
+        intensityControl.addEventListener('input', (e) => {
+            flowIntensity = parseFloat(e.target.value);
+            intensityValueSpan.textContent = `${Math.round(flowIntensity * 100)}%`;
+            draw(); 
+        });
+
+        drawThicknessControl.addEventListener('input', (e) => {
+            currentDrawThickness = parseInt(e.target.value);
+            drawThicknessValueSpan.textContent = `${currentDrawThickness} px`;
+        });
+
+        intensityControl.dispatchEvent(new Event('input'));
+        speedControl.dispatchEvent(new Event('input')); 
+
+        // 6. Tạo GIF (ĐÃ SỬA LỖI ĐƯỜNG DẪN workerScript cho GitHub Pages)
+        generateGifButton.addEventListener('click', () => {
+            if (flowPaths.length === 0) {
+                statusMessage.textContent = "Vui lòng vẽ ít nhất một vùng mô phỏng hợp lệ để tạo GIF.";
+                return;
+            }
+
+            exitAllModes();
+            startStopSimButton.textContent = "BẮT ĐẦU Mô Phỏng";
+            
+            statusMessage.textContent = "Đang tạo GIF... Vui lòng chờ (quá trình này có thể mất 15-30 giây).";
+            generateGifButton.disabled = true;
+
+            // ĐÃ FIX: Sử dụng đường dẫn tương đối để tương thích với GitHub Pages
+            const gif = new GIF({
+                workers: 2,
+                quality: 10, 
+                width: canvas.width,
+                height: canvas.height,
+                workerScript: './gif.worker.js' 
+            });
+
+            const DURATION = 5000; 
+            const FPS = 30;
+            const FRAMES_TO_CAPTURE = Math.floor((DURATION / 1000) * FPS);
+            const FRAME_DELAY = 1000 / FPS; 
+
+            particles.forEach(p => {
+                if (p.type === 'line') p.t = Math.random();
+            });
+            simTime = 0;
+            let frameCount = 0;
+            
+            function captureFrame() {
+                if (frameCount < FRAMES_TO_CAPTURE) {
+                    updateParticles();
+                    draw();
+                    
+                    gif.addFrame(ctx, { delay: FRAME_DELAY, copy: true });
+                    frameCount++;
+                    
+                    setTimeout(captureFrame, 0);
+                } else {
+                    gif.render();
+                }
+            }
+
+            captureFrame();
+            gif.on('finished', (blob) => {
+                const url = URL.createObjectURL(blob);
+                gifPreview.src = url;
+                gifDownloadLink.href = url;
+                document.getElementById('gifPreviewArea').classList.remove('hidden');
+                statusMessage.textContent = "Tạo GIF hoàn tất! Tải xuống hoặc xem trước.";
+                generateGifButton.disabled = false;
+            });
+
+            gif.on('error', (error) => {
+                console.error("Lỗi khi tạo GIF:", error);
+                statusMessage.textContent = "Lỗi khi tạo GIF. Vui lòng kiểm tra console.";
+                generateGifButton.disabled = false;
+            });
+        });
+
+        // --- HÀM MODAL HƯỚNG DẪN ---
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('div').classList.remove('scale-95');
+            modal.querySelector('div').classList.add('scale-100');
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+            }, 300);
+        }
+
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+
+        // --- KHỞI CHẠY ---
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); 
+        animate();
+        updateButtonStates();
     </script>
 </body>
 </html>
