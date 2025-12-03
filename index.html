@@ -92,7 +92,7 @@
                 XIN CHÀO
             </h1>
             <p class="text-xl text-white font-medium italic mt-2 tracking-wider">Mô Phỏng Dòng Chảy Vật Liệu 2D</p>
-            <p class="text-sm text-white font-light mt-1">v1.4 - Khắc phục lỗi vẽ Vector Free-form</p>
+            <p class="text-sm text-white font-light mt-1">v1.5 - Tối ưu hóa chuyển động hạt & Xoay</p>
         </div>
     </div>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
@@ -186,12 +186,12 @@
     
     <div id="helpModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 opacity-0 pointer-events-none">
         <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 md:w-1/2 max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-95">
-            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Hướng Dẫn Sử Dụng Chi Tiết (v1.4 - Khắc phục)</h3>
+            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Hướng Dẫn Sử Dụng Chi Tiết (v1.5 - Tối ưu hóa)</h3>
             <ol class="list-decimal list-inside space-y-2 text-gray-600 text-sm">
                 <li>**Tải Ảnh Nền & Vật Liệu:** Tải lên bản vẽ thiết bị và hình ảnh vật liệu.</li>
-                <li>**Thêm Vùng Dòng Chảy (Đường Line - Pen/Brush):** Nhấn nút, **Nhấn và Giữ chuột** để vẽ đường đi tự do. Nhả chuột để kết thúc. Vật liệu sẽ di chuyển theo đường này.</li>
+                <li>**Thêm Vùng Dòng Chảy (Đường Line - Pen/Brush):** Nhấn nút, **Nhấn và Giữ chuột** để vẽ đường đi tự do. Nhả chuột để kết thúc. Vật liệu sẽ di chuyển theo đường này. Chuyển động được tối ưu với **hiệu ứng xoay** để trông mượt mà hơn.</li>
                 <li>**Chỉnh Sửa Vùng Line (Quan trọng):** Chỉ áp dụng cho Đường Line. Kéo và Thả các **điểm neo (chấm xanh)** để uốn cong.</li>
-                <li>**Thêm Vùng Dòng Chảy (Vector - Free-form):** Nhấn nút, sau đó **Nhấn và Giữ chuột** để vẽ một **Khu vực Tự Do**. **Vật liệu trong vùng này sẽ di chuyển đồng bộ** theo một hướng duy nhất. Hướng được xác định theo chiều kéo chuột nét cuối (từ điểm bắt đầu đến điểm kết thúc).</li>
+                <li>**Thêm Vùng Dòng Chảy (Vector - Free-form):** Nhấn nút, sau đó **Nhấn và Giữ chuột** để vẽ một **Khu vực Tự Do**. **Vật liệu trong vùng này sẽ di chuyển đồng bộ** theo một hướng duy nhất (giống như bị đẩy trong trục vít). Hướng được xác định theo chiều kéo chuột nét cuối (từ điểm bắt đầu đến điểm kết thúc).</li>
                 <li>**Tùy Chỉnh Cường Độ (Độ Đậm):** Thanh trượt < 100% sẽ làm ẩn đường tham chiếu màu cam.</li>
                 <li>**Chạy & Xuất File:** Nhấn **"BẮT ĐẦU Mô Phỏng"** và **"Tạo Tệp GIF"**.</li>
             </ol>
@@ -250,7 +250,7 @@
         const PARTICLE_SPEED_BASE = 0.0005; 
         let currentParticleSpeed = PARTICLE_SPEED_BASE * 5; 
         const MATERIAL_SIZE = 32;   
-        const MIN_PATH_POINTS = 5; // Giảm MIN_PATH_POINTS để dễ vẽ hơn
+        const MIN_PATH_POINTS = 5; 
         const NODE_SIZE = 8;    
         const NODE_HIT_RANGE = 12;
 
@@ -337,7 +337,9 @@
                         t: Math.random(),
                         pathIndex: pathIndex,  
                         offset: Math.random() * 0.05,
-                        size: lerp(0.5, 1.5, Math.random()),
+                        size: lerp(0.7, 1.4, Math.random()),
+                        rotation: Math.random() * Math.PI * 2,
+                        rotationSpeed: lerp(-0.05, 0.05, Math.random()),
                         type: 'line'
                     });
                 }
@@ -363,7 +365,9 @@
                             x: pX,
                             y: pY,
                             pathIndex: pathIndex,
-                            size: lerp(0.5, 1.5, Math.random()),
+                            size: lerp(0.7, 1.4, Math.random()),
+                            rotation: Math.random() * Math.PI * 2,
+                            rotationSpeed: lerp(-0.05, 0.05, Math.random()),
                             type: 'vector',
                             offset: Math.random() * 5 
                         });
@@ -378,13 +382,16 @@
          */
         function isPointInVectorMask(x, y, pathObj) {
             if (!pathObj.maskData) return false;
-
-            const idx = (Math.floor(y) * maskCanvas.width + Math.floor(x)) * 4;
             
-            // Kiểm tra xem điểm ảnh có màu (không trong suốt) không
-            // Chúng ta chỉ cần kiểm tra alpha channel, vì khi vẽ mask, chúng ta vẽ màu trắng (255)
-            // Lấy dữ liệu màu tại vị trí (x, y) từ ImageData của mask
-            if (pathObj.maskData.data[idx + 3] > 0) { // Check Alpha channel
+            // Đảm bảo tọa độ nằm trong phạm vi canvas và mask
+            const floorX = Math.floor(x);
+            const floorY = Math.floor(y);
+            if (floorX < 0 || floorX >= maskCanvas.width || floorY < 0 || floorY >= maskCanvas.height) return false;
+
+            const idx = (floorY * maskCanvas.width + floorX) * 4;
+            
+            // Kiểm tra kênh Alpha (kênh thứ 4)
+            if (pathObj.maskData.data[idx + 3] > 0) { 
                 return true;
             }
             return false;
@@ -402,6 +409,7 @@
 
                 if (p.type === 'line') {
                     p.t += currentParticleSpeed;
+                    p.rotation += p.rotationSpeed * 0.1;
 
                     if (p.t > 1) {
                         p.t = p.t - 1;
@@ -425,26 +433,28 @@
                     
                     p.x += dx + noise.x;
                     p.y += dy + noise.y;
+                    p.rotation += p.rotationSpeed * 0.1;
 
                     // Kiểm tra và reset vị trí (áp dụng tuần hoàn nếu hạt di chuyển ra khỏi bounds)
-                    let needsReset = false;
+                    if (dx > 0 && p.x > bounds.maxX) p.x = bounds.minX;
+                    else if (dx < 0 && p.x < bounds.minX) p.x = bounds.maxX;
                     
-                    if (dx > 0 && p.x > bounds.maxX) { p.x = bounds.minX; needsReset = true; }
-                    else if (dx < 0 && p.x < bounds.minX) { p.x = bounds.maxX; needsReset = true; }
-                    
-                    if (dy > 0 && p.y > bounds.maxY) { p.y = bounds.minY; needsReset = true; }
-                    else if (dy < 0 && p.y < bounds.minY) { p.y = bounds.maxY; needsReset = true; }
+                    if (dy > 0 && p.y > bounds.maxY) p.y = bounds.minY;
+                    else if (dy < 0 && p.y < bounds.minY) p.y = bounds.maxY;
                     
                     // Nếu hạt bị đẩy ra khỏi khu vực đã vẽ (mask) do nhiễu hoặc lỗi làm tròn
                     if (!isPointInVectorMask(p.x, p.y, pathObj)) {
-                         // Đơn giản là reset hạt về một vị trí ngẫu nhiên trong mask
-                        p.x = lerp(bounds.minX, bounds.maxX, Math.random());
-                        p.y = lerp(bounds.minY, bounds.maxY, Math.random());
+                         // Reset vị trí ngẫu nhiên trong bounds, sau đó kiểm tra lại trong mask
                         let attempts = 0;
-                        while (!isPointInVectorMask(p.x, p.y, pathObj) && attempts < 10) {
+                        do {
                             p.x = lerp(bounds.minX, bounds.maxX, Math.random());
                             p.y = lerp(bounds.minY, bounds.maxY, Math.random());
                             attempts++;
+                        } while (!isPointInVectorMask(p.x, p.y, pathObj) && attempts < 10);
+                        
+                        // Nếu sau 10 lần vẫn không tìm thấy, reset lại hạt
+                        if (attempts >= 10) {
+                            p.t = Math.random(); 
                         }
                     }
                 }
@@ -469,7 +479,7 @@
                     pointsToExamine.push({point: path.points[lastIndex], index: lastIndex});
                 }
 
-                pointsToDraw.forEach(({point, index}) => {
+                pointsToExamine.forEach(({point, index}) => {
                     const dist = distance(point, { x, y });
 
                     if (dist < minDist) {
@@ -505,7 +515,8 @@
                 placeholderText.classList.add('hidden');
                 addPathButton.disabled = false;
                 addVectorFieldButton.disabled = false;
-                editPathButton.disabled = flowPaths.filter(p => p.type === 'line').length === 0;
+                // Bật nút edit nếu có ít nhất một line path
+                editPathButton.disabled = flowPaths.filter(p => p.type === 'line').length === 0 && !isEditMode;
             } else {
                 placeholderText.classList.remove('hidden');
                 addPathButton.disabled = true;
@@ -599,20 +610,26 @@
                         const size = MATERIAL_SIZE * p.size;
                         const halfSize = size / 2;
                         
+                        // Thêm nhiễu động nhỏ để tạo cảm giác ma sát (giữ nguyên logic cũ)
                         const noiseX = p.type === 'line' ? Math.sin(p.t * 50 + simTime) * 3 * p.offset : 0;
                         const noiseY = p.type === 'line' ? Math.cos(p.t * 30 + simTime) * 3 * p.offset : 0;
                         
-                        const x = pos.x - halfSize + noiseX;
-                        const y = pos.y - halfSize + noiseY;
+                        const x = pos.x + noiseX; // Vị trí trung tâm
+                        const y = pos.y + noiseY;
+
+                        ctx.save(); // LƯU trạng thái canvas hiện tại
+                        ctx.translate(x, y); // DI CHUYỂN đến tâm hạt
+                        ctx.rotate(p.rotation); // XOAY hạt
 
                         if (materialImage.complete && materialImage.naturalWidth !== 0) {
-                            ctx.drawImage(materialImage, x, y, size, size);
+                            // Vẽ ảnh vật liệu từ tâm mới (-halfSize, -halfSize)
+                            ctx.drawImage(materialImage, -halfSize, -halfSize, size, size); 
                         } else {
-                            ctx.fillStyle = '#facc15'; 
-                            ctx.beginPath();
-                            ctx.arc(pos.x, pos.y, halfSize * 0.7, 0, Math.PI * 2);
-                            ctx.fill();
+                            // Màu và hình dạng giống dăm gỗ (nếu không có ảnh)
+                            ctx.fillStyle = '#b8860b'; // Màu vàng nâu (DarkGoldenrod)
+                            ctx.fillRect(-halfSize, -halfSize, size, size); 
                         }
+                        ctx.restore(); // KHÔI PHỤC trạng thái canvas ban đầu
                     }
                 });
                 ctx.globalAlpha = 1.0; 
@@ -620,7 +637,7 @@
 
             // 4. Thông báo trạng thái vẽ
             if (isDrawing && currentDrawingPath) {
-                const pointsCount = currentDrawingPath.points.length;
+                const pointsCount = currentDrawingPath.type === 'line' ? currentDrawingPath.points.length : currentDrawingPath.drawPoints.length;
                 if (pointsCount > 0) {
                     ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
                     ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
@@ -824,9 +841,6 @@
                             currentDrawingPath.direction = (dy > 0) ? 'down' : 'up';
                         }
                         
-                        // Cần tính lại bounds chính xác sau khi vẽ mask, để giới hạn sinh hạt
-                        // Nhưng tạm thời cứ dùng bounds đã tính toán trong quá trình vẽ
-                        
                         initializeParticles(flowPaths.length - 1);
                         statusMessage.textContent = `✅ Vùng Vector Tự Do đã được tạo. Hướng: ${currentDrawingPath.direction.toUpperCase()}.`;
                     }
@@ -945,7 +959,7 @@
             
             // Đảm bảo nút Line/Vector không còn bị nhấn
             addPathButton.classList.remove('bg-gray-600', 'hover:bg-gray-700');
-            addPathButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+            addPathButton.classList.add('bg-yellow-500', 'hover:hover:bg-yellow-600');
             addPathButton.textContent = '+ Thêm Vùng Dòng Chảy (Đường Line)';
             
             addVectorFieldButton.classList.remove('bg-gray-600', 'hover:bg-gray-700');
@@ -1072,6 +1086,9 @@
             canvas.classList.remove('drawing-mode', 'edit-mode');
             maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height); // Xóa mask
             
+            document.getElementById('gifPreviewArea').classList.add('hidden');
+            document.getElementById('gifPreview').src = '';
+            
             statusMessage.textContent = "Đã xóa toàn bộ Vùng Mô Phỏng.";
             draw();
         });
@@ -1121,6 +1138,7 @@
 
                     if (p.type === 'line') {
                         p.t += currentParticleSpeed;
+                        p.rotation += p.rotationSpeed * 0.1;
                         if (p.t > 1) { p.t = p.t - 1; p.t += (Math.random() * currentParticleSpeed * 5); }
                     } else if (p.type === 'vector' && pathObj.direction) {
                         const speed = currentParticleSpeed * 50; 
@@ -1138,6 +1156,7 @@
                         
                         p.x += dx + noise.x;
                         p.y += dy + noise.y;
+                        p.rotation += p.rotationSpeed * 0.1;
 
                         if (dx > 0 && p.x > bounds.maxX) p.x = bounds.minX;
                         else if (dx < 0 && p.x < bounds.minX) p.x = bounds.maxX;
@@ -1146,7 +1165,14 @@
                         else if (dy < 0 && p.y < bounds.minY) p.y = bounds.maxY;
                         
                         // Kiểm tra mask (sử dụng logic đơn giản hơn cho GIF worker)
-                        // Bỏ qua kiểm tra mask phức tạp trong vòng lặp GIF để tối ưu tốc độ, chỉ dựa vào bounds và reset.
+                        if (!isPointInVectorMask(p.x, p.y, pathObj)) {
+                            let attempts = 0;
+                            do {
+                                p.x = lerp(bounds.minX, bounds.maxX, Math.random());
+                                p.y = lerp(bounds.minY, bounds.maxY, Math.random());
+                                attempts++;
+                            } while (!isPointInVectorMask(p.x, p.y, pathObj) && attempts < 5); // Giảm attempts cho worker
+                        }
                     }
                 });
 
@@ -1186,17 +1212,21 @@
                         const halfSize = size / 2;
                         const noiseX = p.type === 'line' ? Math.sin(p.t * 50 + tempSimTime) * 3 * p.offset : 0;
                         const noiseY = p.type === 'line' ? Math.cos(p.t * 30 + tempSimTime) * 3 * p.offset : 0;
-                        const x = pos.x - halfSize + noiseX;
-                        const y = pos.y - halfSize + noiseY;
+                        
+                        const x = pos.x + noiseX; // Vị trí trung tâm
+                        const y = pos.y + noiseY;
+
+                        ctx.save();
+                        ctx.translate(x, y); 
+                        ctx.rotate(p.rotation); 
 
                         if (materialImage.complete && materialImage.naturalWidth !== 0) {
-                            ctx.drawImage(materialImage, x, y, size, size);
+                            ctx.drawImage(materialImage, -halfSize, -halfSize, size, size);
                         } else {
-                            ctx.fillStyle = '#facc15'; 
-                            ctx.beginPath();
-                            ctx.arc(pos.x, pos.y, halfSize * 0.7, 0, Math.PI * 2);
-                            ctx.fill();
+                            ctx.fillStyle = '#b8860b'; 
+                            ctx.fillRect(-halfSize, -halfSize, size, size); 
                         }
+                        ctx.restore();
                     }
                 });
                 ctx.globalAlpha = 1.0; 
