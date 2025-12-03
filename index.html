@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XIN CHÀO VIỆT NAM - Mô Phỏng Dòng Chảy Vật Liệu 2D</title>
+    <title>XIN CHÀO - Mô Phỏng Dòng Chảy Vật Liệu 2D</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* CSS cho chế độ vẽ */
@@ -37,19 +37,65 @@
         .canvas-area {
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
+        
+        /* 1. CSS CHO HEADER MỚI */
+        .header-background {
+            /* Thay đổi ảnh nền theo yêu cầu (Đặt tên file của bạn vào đây) */
+            background-image: url('wheat-640960_1280.jpg'); 
+            background-size: cover;
+            background-position: center bottom; /* Tập trung vào lúa mì */
+            background-repeat: no-repeat;
+            min-height: 250px; /* Tăng chiều cao header để thấy rõ background */
+            display: flex;
+            align-items: center;
+            position: relative;
+            padding-top: 4rem; /* Để chữ không bị dính vào cạnh trên */
+            padding-bottom: 4rem;
+        }
+
+        /* 2. HIỆU ỨNG TEXT SẶC SỠ */
+        .colorful-text {
+            font-family: 'Arial Black', Gadget, sans-serif;
+            font-size: 4rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+            /* Áp dụng gradient cầu vồng */
+            background: linear-gradient(90deg, #ff0000, #ff8c00, #ffff00, #00ff00, #00bfff, #0000ff, #8a2be2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: moveGradient 10s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes moveGradient {
+            to {
+                background-position: 200% center;
+            }
+        }
+        
+        /* Lớp phủ mờ để chữ dễ đọc hơn */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3); /* Lớp phủ tối mờ */
+            backdrop-filter: blur(1px); /* Tùy chọn làm mờ nhẹ */
+        }
     </style>
 </head>
 <body class="flow-container">
 
-    <div class="bg-indigo-700 py-4 shadow-xl mb-6">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-            <h1 class="text-3xl font-extrabold tracking-wider text-white">
-                XIN CHÀO VIỆT NAM
+    <div class="header-background shadow-2xl mb-6">
+        <div class="overlay"></div> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-start relative z-10 w-full">
+            <h1 class="colorful-text">
+                XIN CHÀO
             </h1>
-            <p class="text-xs text-indigo-300 font-medium">v1.2</p>
+            <p class="text-xl text-white font-medium italic mt-2 tracking-wider">Mô Phỏng Dòng Chảy Vật Liệu 2D</p>
+            <p class="text-sm text-white font-light mt-1">v1.3 - Tối ưu công cụ vẽ</p>
         </div>
     </div>
-
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
         <div class="flex flex-col lg:flex-row gap-6">
 
@@ -141,12 +187,12 @@
     
     <div id="helpModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 opacity-0 pointer-events-none">
         <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 md:w-1/2 max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-95">
-            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Hướng Dẫn Sử Dụng Chi Tiết (v1.2 - Đã tối ưu)</h3>
+            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Hướng Dẫn Sử Dụng Chi Tiết (v1.3 - Tối ưu)</h3>
             <ol class="list-decimal list-inside space-y-2 text-gray-600 text-sm">
                 <li>**Tải Ảnh Nền & Vật Liệu:** Tải lên bản vẽ thiết bị và hình ảnh vật liệu.</li>
-                <li>**Thêm Vùng Dòng Chảy (Đường Line):** Nhấn nút, **Nhấn và Giữ chuột** để vẽ đường đi tự do. Nhả chuột để kết thúc.</li>
+                <li>**Thêm Vùng Dòng Chảy (Đường Line - Pen/Brush):** Nhấn nút, **Nhấn và Giữ chuột** để vẽ đường đi tự do. Nhả chuột để kết thúc. Vật liệu sẽ di chuyển theo đường này.</li>
                 <li>**Chỉnh Sửa Vùng Line (Quan trọng):** Nhấn **"Chọn/Chỉnh Sửa Vùng Vẽ (Line)"**. Kéo và Thả các **điểm neo (chấm xanh)** để uốn cong, tinh chỉnh đường đi chính xác. Nhấn lại nút để thoát.</li>
-                <li>**Thêm Vùng Dòng Chảy (Vector - Tối ưu):** Nhấn nút, sau đó **Nhấn và Kéo chuột** để vẽ Khu vực. **Hướng di chuyển sẽ được xác định tự động** theo chiều kéo (ngang hoặc dọc).</li>
+                <li>**Thêm Vùng Dòng Chảy (Vector - Khu Vực):** Nhấn nút, sau đó **Nhấn và Kéo chuột** để vẽ Khu vực hình chữ nhật. **Tất cả vật liệu trong vùng này sẽ di chuyển đồng bộ cùng một hướng** (hướng được xác định theo chiều kéo chuột).</li>
                 <li>**Tùy Chỉnh Cường Độ (Độ Đậm):** Thanh trượt < 100% sẽ làm ẩn đường tham chiếu màu cam.</li>
                 <li>**Chạy & Xuất File:** Nhấn **"BẮT ĐẦU Mô Phỏng"** và **"Tạo Tệp GIF"** (yêu cầu file `gif.worker.js`).</li>
             </ol>
@@ -288,15 +334,17 @@
                     });
                 }
             } else if (path.type === 'vector') { 
+                // Đảm bảo Vector path có 2 điểm
+                if (path.points.length < 2) return;
+                
                 const minX = Math.min(path.points[0].x, path.points[1].x);
                 const maxX = Math.max(path.points[0].x, path.points[1].x);
                 const minY = Math.min(path.points[0].y, path.points[1].y);
                 const maxY = Math.max(path.points[0].y, path.points[1].y);
                 
-                // Tính toán số lượng hạt dựa trên diện tích vùng (cố định tạm thời)
                 const area = (maxX - minX) * (maxY - minY);
-                const densityFactor = 0.01; // Điều chỉnh mật độ 
-                const count = Math.min(300, Math.floor(area * densityFactor)); // Giới hạn 300 hạt
+                const densityFactor = 0.01; 
+                const count = Math.min(300, Math.floor(area * densityFactor)); 
 
                 for (let i = 0; i < count; i++) {
                      let pX = lerp(minX, maxX, Math.random());
@@ -331,9 +379,11 @@
                         p.t += (Math.random() * currentParticleSpeed * 5); 
                     }
                 } else if (p.type === 'vector') {
+                    if (pathObj.points.length < 2) return;
+                    
                     const speed = currentParticleSpeed * 50; 
                     
-                    // Lấy ra bounds từ 2 điểm neo (đã được lưu khi vẽ)
+                    // Lấy ra bounds từ 2 điểm neo
                     const minX = Math.min(pathObj.points[0].x, pathObj.points[1].x);
                     const maxX = Math.max(pathObj.points[0].x, pathObj.points[1].x);
                     const minY = Math.min(pathObj.points[0].y, pathObj.points[1].y);
@@ -354,18 +404,11 @@
                     p.x += dx + Math.sin(simTime * 10 + p.offset) * 0.5; 
                     p.y += dy + Math.cos(simTime * 10 + p.offset) * 0.5;
 
-                    // Kiểm tra và reset vị trí 
-                    if (p.x < bounds.minX || p.x > bounds.maxX || p.y < bounds.minY || p.y > bounds.maxY) {
-                        if (dx > 0) p.x = bounds.minX;
-                        else if (dx < 0) p.x = bounds.maxX;
-                        
-                        if (dy > 0) p.y = bounds.minY;
-                        else if (dy < 0) p.y = bounds.maxY;
-                        
-                        // Nếu là trục không di chuyển, giữ ngẫu nhiên
-                        if (dx === 0) p.x = lerp(bounds.minX, bounds.maxX, Math.random());
-                        if (dy === 0) p.y = lerp(bounds.minY, bounds.maxY, Math.random());
-                    }
+                    // Kiểm tra và reset vị trí (tái tạo dòng chảy tuần hoàn)
+                    if (p.x < bounds.minX) p.x = bounds.maxX;
+                    if (p.x > bounds.maxX) p.x = bounds.minX;
+                    if (p.y < bounds.minY) p.y = bounds.maxY;
+                    if (p.y > bounds.maxY) p.y = bounds.minY;
                 }
             });
         }
@@ -436,8 +479,8 @@
             // 2. VẼ TẤT CẢ CÁC ĐƯỜNG ĐI ĐÃ ĐỊNH NGHĨA (ĐƯỜNG THAM CHIẾU)
             flowPaths.forEach(path => {
                 if (path.type === 'line') {
-                    // Chỉ vẽ Line Path nếu Opacity = 1.0
-                    if (path.points.length > 1 && flowIntensity === 1.0) { 
+                    // Chỉ vẽ Line Path nếu Opacity = 1.0 (hoặc khi đang vẽ)
+                    if (path.points.length > 1 && (flowIntensity === 1.0 || (isDrawing && path === currentDrawingPath))) { 
                         ctx.strokeStyle = '#f97316'; // Màu cam
                         ctx.lineWidth = path.thickness || 3; 
                         ctx.setLineDash([]); 
@@ -499,13 +542,10 @@
                             case 'left': arrow = '⬅️'; break;
                             case 'up': arrow = '⬆️'; break;
                             case 'down': arrow = '⬇️'; break;
+                            default: arrow = '?'; break;
                         }
                         // Chỉ vẽ mũi tên nếu Vùng đã được xác định
-                        if (path.direction) {
-                            ctx.fillText(arrow, minX + w / 2, minY + h / 2);
-                        } else {
-                             ctx.fillText("Đang vẽ...", minX + w / 2, minY + h / 2);
-                        }
+                        ctx.fillText(arrow, minX + w / 2, minY + h / 2);
                     }
                 }
             });
@@ -562,6 +602,16 @@
                         const lineText = `Đang vẽ Đường Line (${pointsCount} điểm). Nhả chuột để kết thúc.`;
                         ctx.fillText(lineText, canvas.width / 2, canvas.height - 10);
                     } else if (currentDrawingPath.type === 'vector') {
+                         // Nếu đang vẽ Vector, hiển thị P1 và P2
+                         const p1 = currentDrawingPath.points[0];
+                         const p2 = currentDrawingPath.points[1] || {x: finalX, y: finalY};
+                         
+                         ctx.strokeStyle = '#06b6d4'; 
+                         ctx.lineWidth = 2;
+                         ctx.setLineDash([5, 5]); 
+                         ctx.strokeRect(Math.min(p1.x, p2.x), Math.min(p1.y, p2.y), Math.abs(p2.x - p1.x), Math.abs(p2.y - p1.y));
+                         ctx.setLineDash([]); 
+
                         const vectorText = "Đang vẽ Vùng Vector. Kéo và **Nhả chuột** để xác nhận vùng và hướng.";
                         ctx.fillText(vectorText, canvas.width / 2, canvas.height - 10);
                     }
@@ -609,6 +659,7 @@
             const { x, y } = getCoords(e);
             
             if (isPathMode && !isDrawing) {
+                // Bắt đầu vẽ Line Path
                 isDrawing = true;
                 currentDrawingPath = {
                     points: [],
@@ -621,12 +672,12 @@
                 currentDrawingPath.points.push({ x, y });
                 draw();
             } 
-            // LOGIC MỚI CHO VÙNG VECTOR: Chỉ cần click để bắt đầu vẽ vùng (P1)
             else if (isVectorMode && !isDrawing) {
+                // Bắt đầu vẽ Vector Field (chỉ cần điểm neo P1)
                 isDrawing = true;
                 currentDrawingPath = {
-                    points: [{ x, y }], // Điểm bắt đầu (P1)
-                    direction: null,    // Hướng sẽ được xác định trong handleEnd.
+                    points: [{ x, y }], 
+                    direction: null,   
                     type: 'vector',
                     thickness: 1 
                 };
@@ -687,6 +738,7 @@
 
         function handleEnd(e) {
             if (isDrawing && currentDrawingPath) {
+                
                 // Lấy tọa độ cuối cùng (cho cả Line và Vector)
                 let finalX, finalY;
                 if (e.changedTouches && e.changedTouches.length > 0) {
@@ -699,11 +751,13 @@
                     finalY = y;
                 }
                 
-                // Logic xử lý kết thúc vẽ Vùng Vector (ĐÃ TỐI ƯU)
+                // Logic xử lý kết thúc vẽ Vùng Vector
                 if (currentDrawingPath.type === 'vector') {
-                    // Đảm bảo có P1 và P2
-                    if (currentDrawingPath.points.length < 1) return;
-                    currentDrawingPath.points[1] = { x: finalX, y: finalY }; // Đảm bảo P2 là điểm cuối
+                    if (currentDrawingPath.points.length === 1) {
+                        currentDrawingPath.points.push({ x: finalX, y: finalY });
+                    } else {
+                        currentDrawingPath.points[1] = { x: finalX, y: finalY }; 
+                    }
 
                     const startX = currentDrawingPath.points[0].x;
                     const startY = currentDrawingPath.points[0].y;
@@ -713,21 +767,19 @@
                     const dx = endX - startX;
                     const dy = endY - startY;
                     
-                    // Xác định hướng theo chiều kéo lớn nhất
-                    if (Math.abs(dx) > Math.abs(dy)) {
-                        currentDrawingPath.direction = (dx > 0) ? 'right' : 'left';
-                    } else {
-                        currentDrawingPath.direction = (dy > 0) ? 'down' : 'up';
-                    }
-                    
-                    // Kiểm tra vùng vẽ có đủ lớn không
+                    // Xác định hướng theo chiều kéo lớn nhất (chủ đạo)
                     const minSize = 20; 
-                    if (Math.abs(dx) < minSize && Math.abs(dy) < minSize) {
-                        flowPaths.pop();
-                        statusMessage.textContent = "❌ Vùng Vector quá nhỏ. Vui lòng kéo chuột để tạo vùng lớn hơn.";
-                    } else {
+                    if (Math.abs(dx) > minSize || Math.abs(dy) > minSize) {
+                        if (Math.abs(dx) > Math.abs(dy)) {
+                            currentDrawingPath.direction = (dx > 0) ? 'right' : 'left';
+                        } else {
+                            currentDrawingPath.direction = (dy > 0) ? 'down' : 'up';
+                        }
                         initializeParticles(flowPaths.length - 1);
                         statusMessage.textContent = `✅ Vùng Vector đã được tạo. Hướng: ${currentDrawingPath.direction.toUpperCase()}.`;
+                    } else {
+                        flowPaths.pop(); // Hủy bỏ nếu quá nhỏ
+                        statusMessage.textContent = "❌ Vùng Vector quá nhỏ hoặc chưa được kéo chuột. Vui lòng thử lại.";
                     }
                     
                     isVectorMode = false;
@@ -735,7 +787,7 @@
                 // Logic xử lý kết thúc vẽ Line Path
                 else if (currentDrawingPath.type === 'line') {
                     if (currentDrawingPath.points.length < MIN_PATH_POINTS) {
-                        flowPaths.pop(); // Hủy bỏ đường line nếu quá ngắn
+                        flowPaths.pop(); 
                         statusMessage.textContent = "❌ Đường Line quá ngắn! Vui lòng vẽ đường dài hơn.";
                     } else {
                         calculatePathDistances(currentDrawingPath);
@@ -750,11 +802,15 @@
                 currentDrawingPath = null;
                 canvas.classList.remove('drawing-mode');
                 
-                // Cập nhật nút Vector
+                // Cập nhật nút
                 addVectorFieldButton.classList.remove('bg-gray-600', 'hover:bg-gray-700');
                 addVectorFieldButton.classList.add('bg-cyan-600', 'hover:bg-cyan-700');
                 addVectorFieldButton.textContent = '+ Thêm Vùng Dòng Chảy (Vector)';
-
+                
+                addPathButton.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+                addPathButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+                addPathButton.textContent = '+ Thêm Vùng Dòng Chảy (Đường Line)';
+                
                 startStopSimButton.disabled = flowPaths.length === 0;
 
             } else if (activeEditPoint) {
@@ -762,7 +818,7 @@
                 const path = flowPaths[activeEditPoint.pathIndex];
                 if (path.type === 'line') {
                     calculatePathDistances(path); 
-                    initializeParticles(activeEditPoint.pathIndex); // Cập nhật hạt
+                    initializeParticles(activeEditPoint.pathIndex); 
                 }
                 activeEditPoint = null;
                 canvas.classList.remove('grabbing');
@@ -771,12 +827,17 @@
             draw();
         }
 
-        // --- XỬ LÝ NÚT THÊM VÙNG LINE ---
+        // --- XỬ LÝ NÚT THÊM VÙNG LINE (PEN/BRUSH MODE) ---
         addPathButton.addEventListener('click', () => {
             isVectorMode = false; 
             isEditMode = false;
             activeEditPoint = null;
             canvas.classList.remove('edit-mode');
+            
+            // Đảm bảo nút Vector không còn bị nhấn
+            addVectorFieldButton.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+            addVectorFieldButton.classList.add('bg-cyan-600', 'hover:bg-cyan-700');
+            addVectorFieldButton.textContent = '+ Thêm Vùng Dòng Chảy (Vector)';
 
             isPathMode = !isPathMode;
 
@@ -785,7 +846,7 @@
                 addPathButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
                 addPathButton.classList.add('bg-gray-600', 'hover:bg-gray-700');
                 addPathButton.textContent = '🔴 HỦY Đường Line (Đang Vẽ)';
-                statusMessage.textContent = "Chế độ Đường Line: Nhấn và giữ chuột để vẽ đường đi.";
+                statusMessage.textContent = "Chế độ Đường Line: Nhấn và giữ chuột để vẽ đường đi tự do.";
             } else {
                 canvas.classList.remove('drawing-mode');
                 addPathButton.classList.remove('bg-gray-600', 'hover:bg-gray-700');
@@ -796,14 +857,20 @@
             draw();
         });
 
-        // --- XỬ LÝ NÚT THÊM VÙNG VECTOR (ĐÃ TỐI ƯU) ---
+        // --- XỬ LÝ NÚT THÊM VÙNG VECTOR (KHU VỰC) ---
         addVectorFieldButton.addEventListener('click', () => {
             isPathMode = false;
             isEditMode = false;
             activeEditPoint = null;
             canvas.classList.remove('edit-mode');
+            
+            // Đảm bảo nút Line không còn bị nhấn
+            addPathButton.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+            addPathButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+            addPathButton.textContent = '+ Thêm Vùng Dòng Chảy (Đường Line)';
 
-            isVectorMode = !isVectorMode; // Chuyển đổi trạng thái
+
+            isVectorMode = !isVectorMode; 
 
             if (isVectorMode) {
                 canvas.classList.add('drawing-mode');
@@ -827,6 +894,16 @@
             isPathMode = false;
             isVectorMode = false;
             canvas.classList.remove('drawing-mode');
+            
+            // Đảm bảo nút Line/Vector không còn bị nhấn
+            addPathButton.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+            addPathButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+            addPathButton.textContent = '+ Thêm Vùng Dòng Chảy (Đường Line)';
+            
+            addVectorFieldButton.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+            addVectorFieldButton.classList.add('bg-cyan-600', 'hover:bg-cyan-700');
+            addVectorFieldButton.textContent = '+ Thêm Vùng Dòng Chảy (Vector)';
+
 
             isEditMode = !isEditMode;
 
@@ -853,9 +930,8 @@
                 startStopSimButton.textContent = 'TẠM DỪNG Mô Phỏng';
                 startStopSimButton.classList.remove('bg-green-600');
                 startStopSimButton.classList.add('bg-red-600');
-                generateGifButton.disabled = false; // Bật nút GIF khi mô phỏng chạy
+                generateGifButton.disabled = false; 
                 
-                // Nếu chưa có hạt, khởi tạo lại
                 if (particles.length === 0 && flowPaths.length > 0) {
                      flowPaths.forEach((_, index) => initializeParticles(index));
                 }
@@ -906,13 +982,12 @@
         intensityControl.addEventListener('input', (e) => {
             flowIntensity = parseFloat(e.target.value);
             intensityValueSpan.textContent = `${Math.round(flowIntensity * 100)}%`;
-            draw(); // Cần vẽ lại để cập nhật opacity của hạt và ẩn/hiện đường Line
+            draw(); 
         });
         
         drawThicknessControl.addEventListener('input', (e) => {
             currentDrawThickness = parseInt(e.target.value);
             drawThicknessValueSpan.textContent = `${currentDrawThickness} px`;
-            // Cập nhật độ dày cho các đường Line đã vẽ 
             flowPaths.filter(p => p.type === 'line').forEach(path => path.thickness = currentDrawThickness);
             draw();
         });
@@ -959,7 +1034,6 @@
                 return;
             }
 
-            // Tạm dừng mô phỏng hiện tại
             const wasSimulating = isSimulating;
             if (wasSimulating) {
                 isSimulating = false;
@@ -980,34 +1054,135 @@
                 height: canvas.height
             });
 
-            const FRAMES = 150; // Tổng số frame (khoảng 5 giây ở 30fps)
-            const delay = 33;   // Độ trễ giữa các frame (1000/30 ≈ 33ms)
+            const FRAMES = 150; 
+            const delay = 33;   
 
-            const tempParticles = JSON.parse(JSON.stringify(particles)); // Sao chép hạt
+            // Sao chép trạng thái hạt hiện tại để đảm bảo GIF bắt đầu từ đúng vị trí
+            const initialParticlesState = JSON.parse(JSON.stringify(particles)); 
             
+            let tempParticles = JSON.parse(JSON.stringify(initialParticlesState));
+            let tempSimTime = simTime; 
+
             // Tạm thời bật cờ mô phỏng chỉ cho việc tạo frame
-            isSimulating = true;
+            let tempIsSimulating = true;
 
             for (let i = 0; i < FRAMES; i++) {
-                // Cập nhật hạt (dùng updateParticles nhưng không vẽ lên màn hình chính)
-                updateParticles();
+                // Sử dụng hàm cập nhật và vẽ tạm thời
+                const updateAndDrawFrame = () => {
+                    tempSimTime += 0.01;
+                    tempParticles.forEach(p => {
+                        const pathObj = flowPaths[p.pathIndex]; 
+                        if (!pathObj) return;
 
-                // Vẽ frame
-                draw();
+                        if (p.type === 'line') {
+                            p.t += currentParticleSpeed;
+
+                            if (p.t > 1) {
+                                p.t = p.t - 1;
+                                p.t += (Math.random() * currentParticleSpeed * 5); 
+                            }
+                        } else if (p.type === 'vector') {
+                            if (pathObj.points.length < 2) return;
+                            
+                            const speed = currentParticleSpeed * 50; 
+                            const minX = Math.min(pathObj.points[0].x, pathObj.points[1].x);
+                            const maxX = Math.max(pathObj.points[0].x, pathObj.points[1].x);
+                            const minY = Math.min(pathObj.points[0].y, pathObj.points[1].y);
+                            const maxY = Math.max(pathObj.points[0].y, pathObj.points[1].y);
+                            const bounds = {minX, maxX, minY, maxY};
+
+                            let dx = 0;
+                            let dy = 0;
+                            switch (pathObj.direction) {
+                                case 'right': dx = speed; break;
+                                case 'left': dx = -speed; break;
+                                case 'up': dy = -speed; break;
+                                case 'down': dy = speed; break;
+                            }
+
+                            p.x += dx + Math.sin(tempSimTime * 10 + p.offset) * 0.5; 
+                            p.y += dy + Math.cos(tempSimTime * 10 + p.offset) * 0.5;
+
+                            if (p.x < bounds.minX) p.x = bounds.maxX;
+                            if (p.x > bounds.maxX) p.x = bounds.minX;
+                            if (p.y < bounds.minY) p.y = bounds.maxY;
+                            if (p.y > bounds.maxY) p.y = bounds.minY;
+                        }
+                    });
+
+                    // Vẽ Frame
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Vẽ nền (lấy từ hàm draw chính)
+                    let drawArea = { x: 0, y: 0, w: canvas.width, h: canvas.height, offsetX: 0, offsetY: 0 };
+                    if (baseImage.complete && baseImage.naturalWidth !== 0) {
+                        const aspectRatio = baseImage.naturalWidth / baseImage.naturalHeight;
+                        if (canvas.width / canvas.height > aspectRatio) {
+                            drawArea.h = canvas.height;
+                            drawArea.w = drawArea.h * aspectRatio;
+                            drawArea.offsetX = (canvas.width - drawArea.w) / 2;
+                        } else {
+                            drawArea.w = canvas.width;
+                            drawArea.h = drawArea.w / aspectRatio;
+                            drawArea.offsetY = (canvas.height - drawArea.h) / 2;
+                        }
+                        ctx.drawImage(baseImage, drawArea.offsetX, drawArea.offsetY, drawArea.w, drawArea.h);
+                    }
+                    
+                    // Vẽ đường tham chiếu (Tùy chọn, thường nên ẩn trong GIF)
+                    // flowPaths.forEach(...) 
+                    
+                    // Vẽ hạt
+                    ctx.globalAlpha = flowIntensity;
+                    tempParticles.forEach(p => {
+                        const pathObj = flowPaths[p.pathIndex]; 
+                        if (!pathObj) return;
+
+                        let pos = { x: 0, y: 0 };
+                        if (p.type === 'line') {
+                            if (pathObj.points.length < MIN_PATH_POINTS) return;
+                            pos = getPositionOnPath(p.t, pathObj);
+                        } else if (p.type === 'vector') {
+                            pos = { x: p.x, y: p.y };
+                        }
+                        
+                        if (pos) {
+                            const size = MATERIAL_SIZE * p.size;
+                            const halfSize = size / 2;
+                            const noiseX = p.type === 'line' ? Math.sin(p.t * 50 + tempSimTime) * 3 * p.offset : 0;
+                            const noiseY = p.type === 'line' ? Math.cos(p.t * 30 + tempSimTime) * 3 * p.offset : 0;
+                            const x = pos.x - halfSize + noiseX;
+                            const y = pos.y - halfSize + noiseY;
+
+                            if (materialImage.complete && materialImage.naturalWidth !== 0) {
+                                ctx.drawImage(materialImage, x, y, size, size);
+                            } else {
+                                ctx.fillStyle = '#facc15'; 
+                                ctx.beginPath();
+                                ctx.arc(pos.x, pos.y, halfSize * 0.7, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        }
+                    });
+                    ctx.globalAlpha = 1.0; 
+                };
+
+                updateAndDrawFrame();
                 
-                // Thêm frame vào GIF
                 gif.addFrame(ctx, { delay: delay, copy: true });
                 
-                // Cập nhật thanh trạng thái (optional)
                 statusMessage.textContent = `⏳ Đang Tạo GIF... (${Math.round((i + 1) / FRAMES * 100)}%)`;
-                await new Promise(resolve => setTimeout(resolve, 1)); // Cho phép trình duyệt cập nhật DOM
+                await new Promise(resolve => setTimeout(resolve, 1)); 
             }
             
-            // Khôi phục lại trạng thái hạt ban đầu
-            particles = tempParticles;
-            isSimulating = wasSimulating; // Khôi phục trạng thái mô phỏng
+            // Khôi phục trạng thái mô phỏng
+            particles = initialParticlesState;
+            simTime = tempSimTime;
+            isSimulating = wasSimulating; 
             if (isSimulating) {
                 animate();
+            } else {
+                draw(); // Vẽ lại frame tĩnh cuối cùng
             }
 
             // Kết xuất GIF
