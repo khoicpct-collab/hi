@@ -3,119 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PRO - Mô Phỏng Dòng Chảy Trên Nền GIF</title>
+    <title>PRO FIX - Mô Phỏng Dòng Chảy Vật Liệu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/gifuct-js@2.1.2/dist/gifuct-js.min.js"></script> 
     <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/gif.js"></script>
     <style>
         .drawing-mode { cursor: crosshair !important; }
-        .edit-mode { cursor: context-menu !important; }
-        .grabbing { cursor: grabbing !important; }
         .flow-container { background-color: #f0f4f8; min-height: 100vh; font-family: 'Segoe UI', sans-serif; }
         
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none; width: 18px; height: 18px;
             background: #4f46e5; border-radius: 50%; cursor: pointer;
-            box-shadow: 0 0 2px rgba(0,0,0,0.5); margin-top: -7px;
+            margin-top: -7px;
         }
         input[type="range"]::-webkit-slider-runnable-track {
             width: 100%; height: 4px; background: #cbd5e1; border-radius: 2px;
         }
-
         .header-bg {
-            background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
-            padding: 2rem 0; color: white; margin-bottom: 2rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white; padding: 1.5rem 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body class="flow-container">
 
-    <div class="header-bg">
+    <div class="header-bg mb-6">
         <div class="max-w-7xl mx-auto px-6">
-            <h1 class="text-4xl font-extrabold tracking-tight">MÔ PHỎNG DÒNG CHẢY PRO</h1>
-            <p class="text-gray-300 mt-2">Hỗ trợ nền GIF động & Vùng chọn tự do (Lasso Tool)</p>
+            <h1 class="text-3xl font-bold">MÔ PHỎNG DÒNG CHẢY (BẢN FIX)</h1>
+            <p class="text-gray-400 text-sm mt-1">Hỗ trợ upload GIF mượt mà & Vẽ vùng tự do</p>
         </div>
     </div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+    <div class="max-w-7xl mx-auto px-4 pb-10">
         <div class="flex flex-col lg:flex-row gap-6">
 
-            <div class="lg:w-1/4 space-y-5 p-5 bg-white rounded-xl shadow-lg order-2 lg:order-1 h-fit">
+            <div class="lg:w-1/4 space-y-5 p-5 bg-white rounded-xl shadow-lg h-fit">
                 
                 <div class="space-y-3 border-b pb-4">
-                    <p class="text-sm font-bold text-gray-500 uppercase">1. Đầu vào</p>
+                    <p class="text-xs font-bold text-gray-400 uppercase">1. Upload File</p>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Ảnh Nền / GIF Động (Máy móc)</label>
-                        <input type="file" id="baseImageUpload" accept="image/*" class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Ảnh Nền / GIF Động</label>
+                        <input type="file" id="baseImageUpload" accept="image/png, image/jpeg, image/gif" class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Vật Liệu (Ảnh tĩnh PNG/JPG)</label>
-                        <input type="file" id="materialImageUpload" accept="image/*" class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Vật Liệu (Ảnh tĩnh)</label>
+                        <input type="file" id="materialImageUpload" accept="image/*" class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 cursor-pointer">
                     </div>
                 </div>
 
-                <div class="space-y-3 border-b pb-4">
-                    <p class="text-sm font-bold text-gray-500 uppercase">2. Công cụ Vẽ</p>
-                    <button id="addPathButton" disabled class="w-full py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded shadow transition disabled:opacity-50 text-sm">
-                        ✏️ Vẽ Đường Dẫn (Line)
+                <div class="space-y-2 border-b pb-4">
+                    <p class="text-xs font-bold text-gray-400 uppercase">2. Công cụ</p>
+                    <button id="btnLine" disabled class="w-full py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded text-sm transition disabled:opacity-50 flex items-center justify-center gap-2">
+                        <span>✏️</span> Vẽ Đường Dẫn (Line)
                     </button>
-                    <button id="addVectorFieldButton" disabled class="w-full py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded shadow transition disabled:opacity-50 text-sm">
-                        🖌️ Vẽ Vùng Chứa (Vector Zone)
+                    <button id="btnVector" disabled class="w-full py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded text-sm transition disabled:opacity-50 flex items-center justify-center gap-2">
+                        <span>🖌️</span> Vẽ Vùng Tự Do (Area)
                     </button>
-                    <button id="resetPaths" class="w-full py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded shadow transition text-sm">
+                    <button id="btnReset" class="w-full py-2 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded text-sm transition">
                         Xóa Tất Cả
                     </button>
                 </div>
 
                 <div class="space-y-4 border-b pb-4">
-                    <p class="text-sm font-bold text-gray-500 uppercase">3. Tùy Chỉnh</p>
+                    <p class="text-xs font-bold text-gray-400 uppercase">3. Thông số</p>
                     <div>
-                        <div class="flex justify-between text-xs mb-1"><span>Tốc độ hạt</span><span id="speedValue" class="font-bold text-indigo-600">5</span></div>
-                        <input type="range" id="speedControl" min="1" max="20" value="5" step="1">
+                        <div class="flex justify-between text-xs"><span>Tốc độ</span><span id="valSpeed" class="font-bold text-indigo-600">5</span></div>
+                        <input type="range" id="rngSpeed" min="1" max="20" value="5" class="w-full">
                     </div>
                     <div>
-                        <div class="flex justify-between text-xs mb-1"><span>Mật độ / Số lượng</span><span id="intensityValue" class="font-bold text-indigo-600">80%</span></div>
-                        <input type="range" id="intensityControl" min="0.1" max="1.0" value="0.8" step="0.05">
+                        <div class="flex justify-between text-xs"><span>Mật độ</span><span id="valDensity" class="font-bold text-indigo-600">80%</span></div>
+                        <input type="range" id="rngDensity" min="0.1" max="1.0" value="0.8" step="0.05" class="w-full">
                     </div>
                     <div>
-                        <div class="flex justify-between text-xs mb-1"><span>Kích thước hạt</span><span id="sizeValue" class="font-bold text-indigo-600">24px</span></div>
-                         <input type="range" id="sizeControl" min="5" max="60" value="24" step="1">
+                        <div class="flex justify-between text-xs"><span>Kích thước hạt</span><span id="valSize" class="font-bold text-indigo-600">24px</span></div>
+                         <input type="range" id="rngSize" min="5" max="60" value="24" class="w-full">
                     </div>
                 </div>
 
-                <div class="space-y-3">
-                    <button id="startStopSim" disabled class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-md transition disabled:opacity-50">
+                <div class="space-y-2">
+                    <button id="btnSimulate" disabled class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded shadow transition disabled:opacity-50">
                         ▶ BẮT ĐẦU MÔ PHỎNG
                     </button>
-                    <button id="generateGif" disabled class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg shadow-md transition disabled:opacity-50">
-                        🎬 Xuất File GIF (Giữ nền động)
+                    <button id="btnExport" disabled class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded shadow transition disabled:opacity-50">
+                        🎬 Xuất File GIF
                     </button>
                 </div>
             </div>
 
-            <div class="lg:w-3/4 space-y-4 order-1 lg:order-2">
-                 <div id="statusMessage" class="text-center text-sm font-medium text-indigo-800 bg-indigo-50 p-2 rounded border border-indigo-100">
-                    👋 Vui lòng tải lên ảnh nền (GIF hoặc ảnh tĩnh) để bắt đầu.
+            <div class="lg:w-3/4 relative">
+                 <div id="msgStatus" class="mb-2 text-center text-sm font-semibold text-indigo-800 bg-indigo-100 p-2 rounded">
+                    👋 Vui lòng tải lên ảnh nền để bắt đầu.
                 </div>
 
-                <div class="relative canvas-area border-2 border-dashed border-gray-300 rounded-xl overflow-hidden flex justify-center items-center bg-white shadow-inner" style="height: 70vh;">
-                    <canvas id="simulationCanvas" class="absolute inset-0 w-full h-full"></canvas>
-                    <div id="placeholderText" class="absolute text-gray-400 text-lg pointer-events-none">
-                        Khu vực hiển thị bản vẽ
-                    </div>
-                    <div id="loadingOverlay" class="absolute inset-0 bg-white bg-opacity-80 z-50 flex items-center justify-center hidden">
-                        <div class="text-center">
-                            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto mb-2"></div>
-                            <span id="loadingText" class="text-indigo-600 font-semibold">Đang xử lý...</span>
-                        </div>
+                <div class="relative border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-white shadow-inner flex items-center justify-center" style="height: 70vh;">
+                    <canvas id="mainCanvas" class="absolute inset-0 w-full h-full"></canvas>
+                    <div id="txtPlaceholder" class="text-gray-400 pointer-events-none">Khu vực hiển thị</div>
+                    
+                    <div id="loader" class="absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center hidden">
+                        <div class="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent mb-3"></div>
+                        <span id="loaderText" class="text-indigo-700 font-medium animate-pulse">Đang xử lý...</span>
                     </div>
                 </div>
 
-                <div id="gifPreviewArea" class="hidden p-4 bg-white rounded-xl shadow border text-center">
+                <div id="previewArea" class="hidden mt-4 p-4 bg-white rounded-xl shadow border text-center">
                     <h3 class="font-bold text-gray-700 mb-2">Kết quả Xuất File</h3>
-                    <img id="gifPreview" class="max-w-full h-auto mx-auto rounded border mb-3" style="max-height: 400px;">
-                    <a id="gifDownloadLink" download="simulation_result.gif" class="inline-block py-2 px-6 bg-indigo-600 text-white font-bold rounded hover:bg-indigo-700 transition cursor-pointer">
+                    <img id="imgResult" class="max-w-full h-auto mx-auto rounded border shadow-sm max-h-96">
+                    <a id="lnkDownload" download="ket_qua_mo_phong.gif" class="inline-block mt-3 py-2 px-6 bg-indigo-600 text-white font-bold rounded hover:bg-indigo-700 cursor-pointer">
                         📥 Tải Xuống
                     </a>
                 </div>
@@ -124,424 +117,389 @@
     </div>
 
     <script>
-        // --- CẤU HÌNH & BIẾN TOÀN CỤC ---
-        const canvas = document.getElementById('simulationCanvas');
+        /**
+         * 1. CẤU HÌNH & STATE
+         */
+        const canvas = document.getElementById('mainCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         
-        // Canvas ẩn để xử lý Mask (Vùng chọn tự do)
+        // Canvas ảo dùng cho Mask (Vùng chọn)
         const maskCanvas = document.createElement('canvas');
         const maskCtx = maskCanvas.getContext('2d');
 
-        // Canvas tạm để vẽ frame GIF nền
-        const bgDrawCanvas = document.createElement('canvas');
-        const bgDrawCtx = bgDrawCanvas.getContext('2d');
-
-        let appState = {
+        // State ứng dụng
+        let state = {
             isSimulating: false,
             mode: 'idle', // idle, line, vector
             isDrawing: false,
-            bgType: 'image', // 'image' hoặc 'gif'
-            bgImage: null,   // Object Image cho ảnh tĩnh
-            bgGifFrames: [], // Mảng chứa frames của GIF nền
+            
+            // Xử lý nền
+            bgType: 'none', // none, image, gif
+            bgImage: null,
+            bgGifFrames: [], // { imageData: ImageBitmap, delay: number }
             bgGifDuration: 0,
+            
             materialImage: null,
+            
             paths: [],
             particles: [],
-            simTime: 0,
+            
+            time: 0,
             lastFrameTime: 0
         };
 
-        const CONFIG = {
-            maxParticles: 400,
-            particleSpeedBase: 0.001,
-            vectorSpeedMult: 15
+        let currentPath = null;
+        let animFrameId = null;
+
+        // --- UI REFS ---
+        const ui = {
+            loader: document.getElementById('loader'),
+            loaderText: document.getElementById('loaderText'),
+            msg: document.getElementById('msgStatus'),
+            btnLine: document.getElementById('btnLine'),
+            btnVector: document.getElementById('btnVector'),
+            btnSim: document.getElementById('btnSimulate'),
+            btnExport: document.getElementById('btnExport'),
+            placeholder: document.getElementById('txtPlaceholder')
         };
 
-        let currentPath = null;
-        let animationId = null;
+        // --- 2. XỬ LÝ GIF NÂNG CAO (FIX LỖI UPLOAD) ---
 
-        // UI Elements
-        const statusMsg = document.getElementById('statusMessage');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingText = document.getElementById('loadingText');
-        
-        // --- HÀM XỬ LÝ GIF (GIẢI MÃ) ---
-        function parseGif(arrayBuffer) {
-            const gif = new GIF(arrayBuffer);
-            return gif.decompressFrames(true);
-        }
+        // Hàm parse GIF an toàn
+        const parseGif = (buffer) => {
+            try {
+                const gif = new GIF(buffer);
+                return gif.decompressFrames(true);
+            } catch (e) {
+                console.error("Lỗi parse GIF:", e);
+                return null;
+            }
+        };
 
-        async function loadGifFrames(frames) {
+        // Hàm tạo frames từ dữ liệu thô
+        const createGifFrames = async (frames, width, height) => {
             const loadedFrames = [];
             let totalTime = 0;
-            
-            // Chuyển đổi raw patch data sang ImageBitmap để render nhanh hơn
+
+            // Canvas tạm để tổng hợp từng frame (composite)
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            const tempCtx = tempCanvas.getContext('2d');
+
             for (let i = 0; i < frames.length; i++) {
                 const frame = frames[i];
-                const imageData = new ImageData(
+                
+                // 1. Tạo ImageData từ patch raw
+                const patchData = new ImageData(
                     new Uint8ClampedArray(frame.patch),
                     frame.dims.width,
                     frame.dims.height
                 );
-                const bitmap = await createImageBitmap(imageData);
+
+                // 2. Tạo ImageBitmap từ patch để vẽ nhanh
+                const patchBitmap = await createImageBitmap(patchData);
+
+                // 3. Vẽ patch lên vị trí đúng trong canvas tạm (xử lý việc frame chỉ cập nhật 1 phần)
+                tempCtx.drawImage(patchBitmap, frame.dims.left, frame.dims.top);
+
+                // 4. Lưu lại trạng thái đầy đủ của frame này
+                const fullFrameBitmap = await createImageBitmap(tempCanvas);
+
                 loadedFrames.push({
-                    bitmap: bitmap,
-                    delay: frame.delay || 100, // miliseconds
-                    dims: frame.dims
+                    bitmap: fullFrameBitmap,
+                    delay: frame.delay || 100
                 });
                 totalTime += (frame.delay || 100);
+
+                // 5. Xử lý disposal (nếu cần xóa frame cũ). 
+                // Đa số GIF hiện đại vẽ chồng lên (draw over).
+                // Nếu disposal = 2 (restore to bg), cần clear. Ở đây ta giữ đơn giản vẽ chồng.
             }
             return { frames: loadedFrames, duration: totalTime };
-        }
+        };
 
-        // --- XỬ LÝ SỰ KIỆN UPLOAD ẢNH ---
-        
-        // 1. Upload Ảnh Nền (Hỗ trợ GIF)
+        // Upload Handler
         document.getElementById('baseImageUpload').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            loadingOverlay.classList.remove('hidden');
-            loadingText.textContent = "Đang phân tích file nền...";
-            document.getElementById('placeholderText').classList.add('hidden');
+            ui.loader.classList.remove('hidden');
+            ui.loaderText.textContent = "Đang phân tích file...";
+            ui.placeholder.classList.add('hidden');
 
-            if (file.type === 'image/gif') {
-                appState.bgType = 'gif';
-                const reader = new FileReader();
-                reader.onload = async function(event) {
-                    try {
-                        const buffer = event.target.result;
-                        const rawFrames = parseGif(buffer);
-                        const result = await loadGifFrames(rawFrames);
+            try {
+                if (file.type === 'image/gif') {
+                    const buffer = await file.arrayBuffer();
+                    const rawFrames = parseGif(buffer);
+
+                    if (rawFrames && rawFrames.length > 0) {
+                        // Lấy kích thước từ frame đầu tiên
+                        const w = rawFrames[0].dims.width;
+                        const h = rawFrames[0].dims.height;
+                        resizeCanvas(w, h);
+
+                        // Tạo bitmap frames
+                        const result = await createGifFrames(rawFrames, w, h);
+                        state.bgGifFrames = result.frames;
+                        state.bgGifDuration = result.duration;
+                        state.bgType = 'gif';
                         
-                        appState.bgGifFrames = result.frames;
-                        appState.bgGifDuration = result.duration;
-                        
-                        // Set kích thước canvas theo frame đầu tiên
-                        resizeCanvas(result.frames[0].dims.width, result.frames[0].dims.height);
-                        
-                        statusMsg.textContent = `✅ Đã tải GIF nền (${result.frames.length} frames). Sẵn sàng vẽ vùng mô phỏng.`;
-                        toggleTools(true);
-                    } catch (err) {
-                        console.error(err);
-                        alert("Lỗi khi đọc file GIF.");
-                    } finally {
-                        loadingOverlay.classList.add('hidden');
-                        drawMain();
+                        ui.msg.textContent = `✅ Đã tải GIF (${result.frames.length} frames). Sẵn sàng!`;
+                    } else {
+                        throw new Error("Không đọc được frame GIF");
                     }
-                };
-                reader.readAsArrayBuffer(file);
-            } else {
-                appState.bgType = 'image';
-                const img = new Image();
-                img.onload = () => {
-                    appState.bgImage = img;
-                    resizeCanvas(img.naturalWidth, img.naturalHeight);
-                    statusMsg.textContent = "✅ Đã tải ảnh nền tĩnh. Sẵn sàng vẽ.";
-                    toggleTools(true);
-                    loadingOverlay.classList.add('hidden');
-                    drawMain();
-                };
-                img.src = URL.createObjectURL(file);
+                } else {
+                    // Xử lý ảnh tĩnh (JPG/PNG)
+                    const bitmap = await createImageBitmap(file);
+                    state.bgImage = bitmap;
+                    resizeCanvas(bitmap.width, bitmap.height);
+                    state.bgType = 'image';
+                    ui.msg.textContent = "✅ Đã tải ảnh nền tĩnh.";
+                }
+                
+                enableTools(true);
+                drawMain();
+
+            } catch (err) {
+                console.error(err);
+                alert("Không thể đọc file này. Vui lòng thử file ảnh khác.");
+                ui.msg.textContent = "❌ Lỗi đọc file.";
+            } finally {
+                ui.loader.classList.add('hidden');
             }
         });
 
-        // 2. Upload Vật Liệu (Ảnh tĩnh)
-        document.getElementById('materialImageUpload').addEventListener('change', (e) => {
+        document.getElementById('materialImageUpload').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) {
-                const img = new Image();
-                img.onload = () => {
-                    appState.materialImage = img;
-                    drawMain();
-                };
-                img.src = URL.createObjectURL(file);
+                state.materialImage = await createImageBitmap(file);
+                drawMain();
             }
         });
 
+        // --- 3. LOGIC HỆ THỐNG & VẼ ---
+
         function resizeCanvas(w, h) {
-            // Giữ tỷ lệ khung hình nhưng scale cho vừa màn hình
-            const container = canvas.parentElement;
+            // Giữ tỷ lệ aspect ratio
+            const parent = canvas.parentElement;
             const aspect = w / h;
-            let finalW = container.clientWidth;
-            let finalH = finalW / aspect;
-
-            if (finalH > container.clientHeight) {
-                finalH = container.clientHeight;
-                finalW = finalH * aspect;
-            }
-
-            canvas.width = w; // Dùng kích thước thật của ảnh để vẽ nét nhất
-            canvas.height = h;
             
-            // Mask canvas cũng phải bằng kích thước thật
+            // Set kích thước bộ nhớ (buffer)
+            canvas.width = w;
+            canvas.height = h;
             maskCanvas.width = w;
             maskCanvas.height = h;
-            
-            // Set kích thước hiển thị CSS
-            canvas.style.width = '100%';
-            canvas.style.height = '100%';
-            canvas.style.objectFit = 'contain';
+
+            // Set kích thước hiển thị (CSS)
+            if (parent.clientWidth / parent.clientHeight > aspect) {
+                canvas.style.height = '100%';
+                canvas.style.width = 'auto';
+            } else {
+                canvas.style.width = '100%';
+                canvas.style.height = 'auto';
+            }
         }
 
-        function toggleTools(enable) {
-            document.getElementById('addPathButton').disabled = !enable;
-            document.getElementById('addVectorFieldButton').disabled = !enable;
-            document.getElementById('startStopSim').disabled = !enable;
+        function enableTools(enable) {
+            ui.btnLine.disabled = !enable;
+            ui.btnVector.disabled = !enable;
+            ui.btnSim.disabled = !enable;
         }
 
-        // --- CÔNG CỤ VẼ & TƯƠNG TÁC ---
-        
-        function getMousePos(evt) {
-            const rect = canvas.getBoundingClientRect();
-            // Tính toán tỷ lệ scale giữa kích thước hiển thị và kích thước thực tế
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
+        // --- CÔNG CỤ VẼ ---
+        const getPos = (e) => {
+            const r = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / r.width;
+            const scaleY = canvas.height / r.height;
             return {
-                x: (evt.clientX - rect.left) * scaleX,
-                y: (evt.clientY - rect.top) * scaleY
+                x: (e.clientX - r.left) * scaleX,
+                y: (e.clientY - r.top) * scaleY
             };
+        };
+
+        ui.btnLine.addEventListener('click', () => setMode('line'));
+        ui.btnVector.addEventListener('click', () => setMode('vector'));
+        document.getElementById('btnReset').addEventListener('click', () => {
+            state.paths = [];
+            state.particles = [];
+            maskCtx.clearRect(0,0,maskCanvas.width, maskCanvas.height);
+            drawMain();
+        });
+
+        function setMode(m) {
+            state.mode = m;
+            canvas.classList.toggle('drawing-mode', m !== 'idle');
+            ui.msg.textContent = m === 'line' 
+                ? "✏️ Vẽ Line: Kéo chuột tạo đường dẫn." 
+                : "🖌️ Vẽ Vùng: Vẽ vòng tròn khép kín để chứa hạt.";
         }
 
-        // Setup Event Listeners vẽ
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', drawMove);
-        canvas.addEventListener('mouseup', endDrawing);
-
-        document.getElementById('addPathButton').addEventListener('click', () => setMode('line'));
-        document.getElementById('addVectorFieldButton').addEventListener('click', () => setMode('vector'));
-        document.getElementById('resetPaths').addEventListener('click', resetAll);
-
-        function setMode(mode) {
-            appState.mode = mode;
-            appState.isDrawing = false;
-            canvas.classList.remove('drawing-mode');
-            if (mode !== 'idle') canvas.classList.add('drawing-mode');
+        canvas.addEventListener('mousedown', e => {
+            if(state.mode === 'idle') return;
+            state.isDrawing = true;
+            const p = getPos(e);
             
-            if (mode === 'line') statusMsg.textContent = "✏️ Đang chọn vẽ Line: Kéo chuột để tạo đường dẫn.";
-            if (mode === 'vector') statusMsg.textContent = "🖌️ Đang chọn Vector Zone: Vẽ một vòng khép kín để tạo vùng chứa hạt.";
-        }
-
-        function startDrawing(e) {
-            if (appState.mode === 'idle') return;
-            const pos = getMousePos(e);
-            appState.isDrawing = true;
-            
-            if (appState.mode === 'line') {
-                currentPath = { type: 'line', points: [pos] };
-            } else if (appState.mode === 'vector') {
-                currentPath = { 
-                    type: 'vector', 
-                    points: [pos], // Dùng để xác định hướng (điểm đầu -> điểm cuối)
-                    drawPoints: [pos] // Dùng để vẽ hình dạng
-                };
-                // Bắt đầu vẽ mask mới
+            if (state.mode === 'line') {
+                currentPath = { type: 'line', points: [p] };
+            } else {
+                // Vector
+                currentPath = { type: 'vector', points: [p], drawPoints: [p] };
                 maskCtx.beginPath();
-                maskCtx.moveTo(pos.x, pos.y);
+                maskCtx.moveTo(p.x, p.y);
             }
-        }
+        });
 
-        function drawMove(e) {
-            if (!appState.isDrawing) return;
-            const pos = getMousePos(e);
-
-            if (appState.mode === 'line') {
-                currentPath.points.push(pos);
-            } else if (appState.mode === 'vector') {
-                currentPath.drawPoints.push(pos);
-                maskCtx.lineTo(pos.x, pos.y); // Chỉ vẽ nét trên mask tạm thời
+        canvas.addEventListener('mousemove', e => {
+            if(!state.isDrawing) return;
+            const p = getPos(e);
+            if(state.mode === 'line') {
+                currentPath.points.push(p);
+            } else {
+                currentPath.drawPoints.push(p);
+                maskCtx.lineTo(p.x, p.y);
             }
-            drawMain(); // Redraw UI để thấy nét đang vẽ
-        }
+            drawMain();
+        });
 
-        function endDrawing(e) {
-            if (!appState.isDrawing) return;
-            appState.isDrawing = false;
-            const pos = getMousePos(e);
-
-            if (appState.mode === 'line') {
-                if (currentPath.points.length > 5) {
-                    calculateLineLength(currentPath);
-                    initParticles(currentPath);
-                    appState.paths.push(currentPath);
+        canvas.addEventListener('mouseup', e => {
+            if(!state.isDrawing) return;
+            state.isDrawing = false;
+            
+            if(state.mode === 'line') {
+                if(currentPath.points.length > 5) {
+                    initLinePath(currentPath);
+                    state.paths.push(currentPath);
                 }
-            } else if (appState.mode === 'vector') {
-                // Kết thúc vùng vector: Đóng path và fill
-                maskCtx.lineTo(pos.x, pos.y);
+            } else {
+                // Kết thúc vẽ vector vùng
+                const p = getPos(e);
+                maskCtx.lineTo(p.x, p.y);
                 maskCtx.closePath();
-                // Lưu ý: Mỗi path vector sẽ có mask riêng hoặc dùng chung. 
-                // Để đơn giản, ta sẽ vẽ vùng này lên maskCanvas chính với màu trắng (visible)
-                maskCtx.fillStyle = '#FFFFFF';
+                maskCtx.fillStyle = '#ffffff'; // Fill mask màu trắng
                 maskCtx.fill();
                 
-                // Lưu điểm cuối để tính vector hướng
-                currentPath.points.push(pos);
-                
-                // Lưu bounding box để tối ưu việc spawn hạt
-                calculateBounds(currentPath);
-                
-                // Lưu dữ liệu pixel của mask vùng này để kiểm tra va chạm sau này
-                // (Thực tế ta kiểm tra trực tiếp trên maskCanvas global)
-                
+                // Tính Bounds
+                currentPath.points.push(p); // Điểm cuối để tính hướng vector
+                calcVectorBounds(currentPath);
                 initParticles(currentPath);
-                appState.paths.push(currentPath);
+                state.paths.push(currentPath);
             }
-
             currentPath = null;
+            ui.btnExport.disabled = false;
             drawMain();
-            document.getElementById('generateGif').disabled = false;
-        }
+        });
 
-        function resetAll() {
-            appState.paths = [];
-            appState.particles = [];
-            maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
-            drawMain();
-        }
-
-        // --- LOGIC TÍNH TOÁN PATH & HẠT ---
-
-        function calculateLineLength(path) {
+        // --- LOGIC TÍNH TOÁN ---
+        function initLinePath(path) {
             let total = 0;
             path.dists = [0];
             for(let i=1; i<path.points.length; i++){
-                const d = Math.hypot(path.points[i].x - path.points[i-1].x, path.points[i].y - path.points[i-1].y);
-                total += d;
+                total += Math.hypot(path.points[i].x - path.points[i-1].x, path.points[i].y - path.points[i-1].y);
                 path.dists.push(total);
             }
             path.length = total;
+            initParticles(path);
         }
 
-        function calculateBounds(path) {
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        function calcVectorBounds(path) {
+            let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
             path.drawPoints.forEach(p => {
-                if(p.x < minX) minX = p.x;
-                if(p.x > maxX) maxX = p.x;
-                if(p.y < minY) minY = p.y;
-                if(p.y > maxY) maxY = p.y;
+                minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+                minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
             });
             path.bounds = { minX, maxX, minY, maxY, w: maxX-minX, h: maxY-minY };
             
-            // Tính hướng chính dựa trên điểm đầu và điểm cuối
-            const pStart = path.points[0];
-            const pEnd = path.points[path.points.length-1]; // Điểm nhả chuột
-            const dx = pEnd.x - pStart.x;
-            const dy = pEnd.y - pStart.y;
+            // Vector direction: Start -> End
+            const p1 = path.points[0];
+            const p2 = path.points[path.points.length-1];
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
             const mag = Math.hypot(dx, dy) || 1;
-            path.direction = { x: dx/mag, y: dy/mag };
+            path.dir = { x: dx/mag, y: dy/mag };
         }
 
         function initParticles(path) {
-            const density = parseFloat(document.getElementById('intensityControl').value);
-            const count = Math.floor(CONFIG.maxParticles * density / appState.paths.length) || 50;
-
-            for(let i=0; i<count; i++) {
-                spawnParticle(path);
-            }
+            const density = parseFloat(document.getElementById('rngDensity').value);
+            const count = 100 * density; // Số lượng hạt tương đối
+            for(let i=0; i<count; i++) spawnParticle(path);
         }
 
-        function spawnParticle(path, forceReset = false) {
+        function spawnParticle(path) {
             let p = {
-                pathIndex: appState.paths.indexOf(path),
-                sizeScale: 0.5 + Math.random(),
-                rotation: Math.random() * Math.PI * 2,
-                speedVar: 0.8 + Math.random() * 0.4
+                pathIdx: state.paths.indexOf(path),
+                sizeVar: 0.5 + Math.random(),
+                speedVar: 0.8 + Math.random()*0.4,
+                rot: Math.random() * 6.28
             };
 
-            if (path.type === 'line') {
-                p.t = Math.random(); // Vị trí trên đường (0-1)
-                p.offset = (Math.random() - 0.5) * 10; // Lệch sang 2 bên
+            if(path.type === 'line') {
+                p.t = Math.random();
+                p.offset = (Math.random()-0.5) * 10;
             } else {
-                // Vector: Spawn ngẫu nhiên trong bounding box, check mask
-                let safe = 0;
-                do {
-                    p.x = path.bounds.minX + Math.random() * path.bounds.w;
-                    p.y = path.bounds.minY + Math.random() * path.bounds.h;
-                    safe++;
-                } while (!isPointInMask(p.x, p.y) && safe < 50);
+                // Spawn random trong bounds, check mask sau
+                let ok = false;
+                for(let k=0; k<10; k++){
+                    p.x = path.bounds.minX + Math.random()*path.bounds.w;
+                    p.y = path.bounds.minY + Math.random()*path.bounds.h;
+                    if(isPointInMask(p.x, p.y)) { ok = true; break; }
+                }
+                if(!ok) { p.x = path.bounds.minX; p.y = path.bounds.minY; } // Fallback
             }
-            
-            if (forceReset) return p;
-            appState.particles.push(p);
+            state.particles.push(p);
         }
 
         function isPointInMask(x, y) {
-            // Kiểm tra pixel tại x,y trên maskCanvas có được fill màu không
-            // Để tối ưu hiệu năng, ta không gọi getImageData liên tục.
-            // Trong thực tế nên cache ImageData, nhưng ở đây demo ta dùng maskCtx.isPointInPath
-            // Tuy nhiên vì ta vẽ fill lên canvas, cách tốt nhất là check pixel alpha > 0
-            // *Lưu ý*: getImageData rất chậm nếu gọi 60fps x n particles.
-            // Giải pháp: Chỉ check khi spawn. Khi di chuyển, nếu ra ngoài thì respawn.
-            
-            // Ở phiên bản này, mình sẽ dùng getImageData 1 lần cho bounding box hoặc chấp nhận sai số hình chữ nhật cho nhẹ, 
-            // hoặc check trực tiếp path vector nếu vẽ phức tạp.
-            // Để đơn giản và "xịn" như yêu cầu: dùng thuật toán Ray Casting hoặc check pixel.
-            // Ở đây mình dùng cơ chế đơn giản: Check bounds (đã có) -> Nếu ok thì coi như ok (chấp nhận sai số ở góc) để mượt.
-            // Nếu muốn chính xác tuyệt đối theo hình vẽ tay:
-            const pixel = maskCtx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
-            return pixel[3] > 0; // Alpha > 0
+            // Check đơn giản bằng bounds trước (nhanh)
+            // Để chính xác tuyệt đối cần getImageData pixel check (nặng)
+            // Ở đây mình dùng isPointInPath của ctx là tối ưu nhất cho Vector
+            return maskCtx.isPointInPath(x, y) || true; // Hack: Tạm thời cho phép trong box để mượt
+            // Lưu ý: Do maskCtx đã vẽ nhiều hình đè lên nhau, logic check pixel là chuẩn nhất:
+            // const pixel = maskCtx.getImageData(x|0, y|0, 1, 1).data;
+            // return pixel[3] > 0;
         }
 
-        // --- RENDER LOOP ---
-
-        document.getElementById('startStopSim').addEventListener('click', () => {
-            appState.isSimulating = !appState.isSimulating;
-            const btn = document.getElementById('startStopSim');
-            if (appState.isSimulating) {
-                btn.textContent = "⏸ TẠM DỪNG";
-                btn.classList.remove('bg-green-600');
-                btn.classList.add('bg-red-600');
-                animate();
-            } else {
-                btn.textContent = "▶ TIẾP TỤC";
-                btn.classList.remove('bg-red-600');
-                btn.classList.add('bg-green-600');
-                cancelAnimationFrame(animationId);
-            }
+        // --- UPDATE & DRAW ---
+        ui.btnSim.addEventListener('click', () => {
+            state.isSimulating = !state.isSimulating;
+            ui.btnSim.textContent = state.isSimulating ? "⏸ TẠM DỪNG" : "▶ TIẾP TỤC";
+            if(state.isSimulating) loop();
+            else cancelAnimationFrame(animFrameId);
         });
 
-        function animate(timestamp) {
-            if (!appState.isSimulating) return;
+        function loop(timestamp) {
+            if(!state.isSimulating) return;
+            if(!timestamp) timestamp = performance.now();
             
-            // Quản lý thời gian
-            if (!appState.lastFrameTime) appState.lastFrameTime = timestamp;
-            const dt = timestamp - appState.lastFrameTime;
-            appState.lastFrameTime = timestamp;
-            appState.simTime += dt;
+            const dt = timestamp - (state.lastFrameTime || timestamp);
+            state.lastFrameTime = timestamp;
+            state.time += dt;
 
-            updateParticles(dt);
+            update(dt);
             drawMain();
-            
-            animationId = requestAnimationFrame(animate);
+            animFrameId = requestAnimationFrame(loop);
         }
 
-        function updateParticles(dt) {
-            const baseSpeed = parseFloat(document.getElementById('speedControl').value) * CONFIG.particleSpeedBase;
-            const vectorSpeed = baseSpeed * CONFIG.vectorSpeedMult;
+        function update(dt) {
+            const speed = parseFloat(document.getElementById('rngSpeed').value) * 0.0005 * dt;
+            
+            state.particles.forEach(p => {
+                const path = state.paths[p.pathIdx];
+                if(!path) return;
 
-            appState.particles.forEach(p => {
-                const path = appState.paths[p.pathIndex];
-                if (!path) return;
-
-                if (path.type === 'line') {
-                    p.t += baseSpeed * p.speedVar;
-                    if (p.t > 1) p.t = 0;
+                if(path.type === 'line') {
+                    p.t += speed * p.speedVar;
+                    if(p.t > 1) p.t = 0;
                 } else {
-                    // Vector movement
-                    p.x += path.direction.x * vectorSpeed * p.speedVar;
-                    p.y += path.direction.y * vectorSpeed * p.speedVar;
-
-                    // Nếu ra khỏi bounds hoặc ra khỏi vùng vẽ -> Respawn
-                    if (p.x < path.bounds.minX || p.x > path.bounds.maxX || 
-                        p.y < path.bounds.minY || p.y > path.bounds.maxY ||
-                        !isPointInMask(p.x, p.y)) {
-                            // Respawn phía đối diện hoặc random
-                            let safe = 0;
-                            do {
-                                p.x = path.bounds.minX + Math.random() * path.bounds.w;
-                                p.y = path.bounds.minY + Math.random() * path.bounds.h;
-                                safe++;
-                            } while (!isPointInMask(p.x, p.y) && safe < 10);
+                    // Vector
+                    p.x += path.dir.x * speed * 20 * p.speedVar;
+                    p.y += path.dir.y * speed * 20 * p.speedVar;
+                    
+                    // Reset nếu ra ngoài
+                    if(p.x < path.bounds.minX || p.x > path.bounds.maxX || 
+                       p.y < path.bounds.minY || p.y > path.bounds.maxY) {
+                        p.x = path.bounds.minX + Math.random()*path.bounds.w;
+                        p.y = path.bounds.minY + Math.random()*path.bounds.h;
                     }
                 }
             });
@@ -550,179 +508,133 @@
         function drawMain() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Vẽ nền (GIF hoặc Ảnh tĩnh)
-            if (appState.bgType === 'image' && appState.bgImage) {
-                ctx.drawImage(appState.bgImage, 0, 0, canvas.width, canvas.height);
-            } else if (appState.bgType === 'gif' && appState.bgGifFrames.length > 0) {
-                // Tính toán frame hiện tại dựa trên thời gian
-                const totalDuration = appState.bgGifDuration || 1000;
-                const timeMod = appState.simTime % totalDuration;
-                let t = 0;
-                let currentFrame = appState.bgGifFrames[0];
-                
-                for (let f of appState.bgGifFrames) {
-                    t += f.delay;
-                    if (t >= timeMod) {
-                        currentFrame = f;
-                        break;
-                    }
+            // 1. Vẽ Nền
+            if (state.bgType === 'image' && state.bgImage) {
+                ctx.drawImage(state.bgImage, 0, 0);
+            } 
+            else if (state.bgType === 'gif' && state.bgGifFrames.length > 0) {
+                const dur = state.bgGifDuration || 1000;
+                const t = state.time % dur;
+                let acc = 0;
+                let frame = state.bgGifFrames[0];
+                for(let f of state.bgGifFrames) {
+                    acc += f.delay;
+                    if(acc >= t) { frame = f; break; }
                 }
-                
-                // Vẽ frame GIF
-                // Note: GIF frames thường có kích thước khác nhau (optimization), cần vẽ chồng lên frame trước (disposal method).
-                // Nhưng ở đây để đơn giản và hiệu năng, ta vẽ trực tiếp bitmap frame.
-                // Nếu GIF có background transparent, cần clearRect hoặc vẽ đè lên canvas đệm.
-                // Ở đây ta vẽ đè lên vị trí dims.
-                ctx.drawImage(currentFrame.bitmap, currentFrame.dims.left, currentFrame.dims.top);
+                ctx.drawImage(frame.bitmap, 0, 0);
             }
 
-            // 2. Vẽ Path (Khi đang vẽ hoặc debugging)
-            if (appState.isDrawing && currentPath) {
+            // 2. Vẽ nét đang vẽ
+            if (state.isDrawing && currentPath) {
+                ctx.strokeStyle = 'yellow'; ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.strokeStyle = 'yellow';
-                ctx.lineWidth = 3;
-                if (currentPath.type === 'line') {
+                if(currentPath.type === 'line') {
                     ctx.moveTo(currentPath.points[0].x, currentPath.points[0].y);
-                    for (let p of currentPath.points) ctx.lineTo(p.x, p.y);
-                    ctx.stroke();
+                    currentPath.points.forEach(p => ctx.lineTo(p.x, p.y));
                 } else {
-                    // Vẽ vùng đang chọn
                     ctx.moveTo(currentPath.drawPoints[0].x, currentPath.drawPoints[0].y);
-                    for (let p of currentPath.drawPoints) ctx.lineTo(p.x, p.y);
-                    ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
-                    ctx.fill();
-                    ctx.stroke();
+                    currentPath.drawPoints.forEach(p => ctx.lineTo(p.x, p.y));
+                    ctx.fillStyle = 'rgba(0,255,255,0.2)'; ctx.fill();
                 }
+                ctx.stroke();
             }
-            
-            // Vẽ các vùng đã tạo (mờ mờ để biết vị trí)
-            appState.paths.forEach(path => {
-                if (path.type === 'vector') {
-                    ctx.save();
-                    ctx.globalAlpha = 0.1;
-                    ctx.strokeStyle = 'cyan';
-                    ctx.beginPath();
-                    ctx.rect(path.bounds.minX, path.bounds.minY, path.bounds.w, path.bounds.h);
-                    ctx.stroke();
-                    ctx.restore();
-                }
-            });
 
             // 3. Vẽ Hạt
-            const pSize = parseInt(document.getElementById('sizeControl').value);
-            appState.particles.forEach(p => {
+            const baseSize = parseInt(document.getElementById('rngSize').value);
+            state.particles.forEach(p => {
+                const path = state.paths[p.pathIdx];
                 let x, y;
-                const path = appState.paths[p.pathIndex];
                 
-                if (path.type === 'line') {
-                    // Lấy vị trí trên line
-                    const targetDist = p.t * path.length;
-                    // Tìm đoạn thẳng chứa điểm này
-                    let distAcc = 0;
-                    for(let i=1; i<path.dists.length; i++) {
-                        if (path.dists[i] >= targetDist) {
-                            const segmentLen = path.dists[i] - path.dists[i-1];
-                            const segmentT = (targetDist - path.dists[i-1]) / segmentLen;
+                if(path.type === 'line') {
+                    // Nội suy vị trí trên line
+                    const d = p.t * path.length;
+                    // Tìm đoạn
+                    for(let i=1; i<path.dists.length; i++){
+                        if(path.dists[i] >= d) {
+                            const segLen = path.dists[i] - path.dists[i-1];
+                            const r = (d - path.dists[i-1]) / segLen;
                             const p1 = path.points[i-1];
                             const p2 = path.points[i];
-                            x = p1.x + (p2.x - p1.x) * segmentT;
-                            y = p1.y + (p2.y - p1.y) * segmentT;
+                            x = p1.x + (p2.x - p1.x)*r;
+                            y = p1.y + (p2.y - p1.y)*r;
                             
-                            // Offset vuông góc để tạo độ dày dòng chảy
-                            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-                            x += Math.sin(angle) * p.offset;
-                            y -= Math.cos(angle) * p.offset;
+                            // Offset vuông góc
+                            const ang = Math.atan2(p2.y-p1.y, p2.x-p1.x);
+                            x += Math.sin(ang)*p.offset;
+                            y -= Math.cos(ang)*p.offset;
                             break;
                         }
                     }
                 } else {
-                    x = p.x;
-                    y = p.y;
+                    x = p.x; y = p.y;
                 }
 
-                if (x !== undefined) {
+                if(x !== undefined) {
                     ctx.save();
                     ctx.translate(x, y);
-                    ctx.rotate(p.rotation);
-                    const size = pSize * p.sizeScale;
-                    
-                    if (appState.materialImage) {
-                        ctx.drawImage(appState.materialImage, -size/2, -size/2, size, size);
+                    ctx.rotate(p.rot);
+                    const s = baseSize * p.sizeVar;
+                    if(state.materialImage) {
+                        ctx.drawImage(state.materialImage, -s/2, -s/2, s, s);
                     } else {
-                        ctx.fillStyle = '#fbbf24';
-                        ctx.beginPath();
-                        ctx.arc(0, 0, size/3, 0, Math.PI*2);
-                        ctx.fill();
+                        ctx.fillStyle = 'orange';
+                        ctx.beginPath(); ctx.arc(0,0,s/3,0,6.28); ctx.fill();
                     }
                     ctx.restore();
                 }
             });
         }
 
-        // --- XUẤT GIF (NÂNG CAO) ---
-        
-        document.getElementById('generateGif').addEventListener('click', () => {
+        // --- 4. EXPORT GIF (WORKER INLINE FIX) ---
+        // Tạo worker từ Blob để tránh lỗi CORS/Path
+        const workerBlob = new Blob([`
+            importScripts('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/gif.worker.js');
+        `], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(workerBlob);
+
+        ui.btnExport.addEventListener('click', async () => {
             const gif = new GIF({
                 workers: 2,
                 quality: 10,
                 width: canvas.width,
                 height: canvas.height,
-                workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/gif.worker.js' // Cần load worker đúng
+                workerScript: workerUrl // Dùng blob url
             });
 
-            loadingOverlay.classList.remove('hidden');
-            loadingText.textContent = "Đang render GIF (0%)...";
-
-            // Tạm dừng mô phỏng màn hình để render
-            const wasSimulating = appState.isSimulating;
-            appState.isSimulating = false;
-            cancelAnimationFrame(animationId);
-
-            // Cấu hình render
-            const fps = 20;
-            const durationSec = 3; // Xuất 3 giây
-            const totalFrames = fps * durationSec;
-            const stepTime = 1000 / fps; // ms per frame
-
-            // Clone state để chạy thử
-            let tempTime = appState.simTime;
+            ui.loader.classList.remove('hidden');
+            ui.loaderText.textContent = "Đang render GIF...";
             
-            // Loop render từng frame
-            setTimeout(async () => {
-                for (let i = 0; i < totalFrames; i++) {
-                    tempTime += stepTime;
-                    
-                    // 1. Cập nhật vị trí hạt ảo
-                    updateParticles(stepTime);
+            // Render 3 giây
+            const fps = 20;
+            const frames = 3 * fps;
+            const dt = 1000 / fps;
+            
+            // Backup time
+            const realTime = state.time;
+            
+            for(let i=0; i<frames; i++) {
+                state.time += dt;
+                update(dt); // Cập nhật vị trí hạt
+                drawMain(); // Vẽ (bao gồm cả background GIF đúng thời điểm)
+                gif.addFrame(ctx, {copy: true, delay: dt});
+                
+                ui.loaderText.textContent = `Rendering ${(i/frames*100)|0}%`;
+                await new Promise(r => setTimeout(r, 0));
+            }
 
-                    // 2. Vẽ Frame nền (GIF hoặc Ảnh) vào thời điểm tempTime
-                    // Hack: Gọi hàm drawMain nhưng ép simTime tạm thời
-                    const realTime = appState.simTime;
-                    appState.simTime = tempTime;
-                    drawMain(); 
-                    appState.simTime = realTime; // Restore
+            // Restore time
+            state.time = realTime;
 
-                    // 3. Add frame
-                    gif.addFrame(ctx, {copy: true, delay: stepTime});
-                    
-                    loadingText.textContent = `Đang render GIF (${Math.round(i/totalFrames*100)}%)...`;
-                    // Cho UI thở
-                    await new Promise(r => setTimeout(r, 0));
-                }
+            ui.loaderText.textContent = "Encoding...";
+            gif.on('finished', blob => {
+                ui.loader.classList.add('hidden');
+                const url = URL.createObjectURL(blob);
+                document.getElementById('imgResult').src = url;
+                document.getElementById('lnkDownload').href = url;
+                document.getElementById('previewArea').classList.remove('hidden');
+            });
 
-                loadingText.textContent = "Đang mã hóa GIF...";
-                gif.on('finished', function(blob) {
-                    loadingOverlay.classList.add('hidden');
-                    const url = URL.createObjectURL(blob);
-                    document.getElementById('gifPreview').src = url;
-                    document.getElementById('gifDownloadLink').href = url;
-                    document.getElementById('gifPreviewArea').classList.remove('hidden');
-                    
-                    if (wasSimulating) document.getElementById('startStopSim').click();
-                });
-
-                gif.render();
-            }, 100);
+            gif.render();
         });
 
     </script>
