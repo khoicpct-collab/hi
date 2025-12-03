@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XIN CHÀO - Mô Phỏng Dòng Chảy Vật Liệu 2D</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/gifuct-js@2.1.2/dist/gifuct-js.min.js"></script> 
     <style>
         /* CSS cho chế độ vẽ */
         .drawing-mode {
@@ -79,7 +80,8 @@
             right: 0;
             bottom: 0;
             background: rgba(0, 0, 0, 0.3); 
-            backdrop-filter: blur(1px); 
+            /* CHỈNH SỬA: Tăng làm mờ nhẹ (4px) */
+            backdrop-filter: blur(4px); 
         }
     </style>
 </head>
@@ -108,8 +110,8 @@
                         <input type="file" id="baseImageUpload" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                     </div>
                     <div>
-                        <label for="materialImageUpload" class="block text-sm font-medium text-gray-700 mb-1">2. Ảnh Vật Liệu (Tối ưu 32x32px)</label>
-                        <input type="file" id="materialImageUpload" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        <label for="materialImageUpload" class="block text-sm font-medium text-gray-700 mb-1">2. Ảnh Vật Liệu (JPG/PNG/GIF)</label>
+                        <input type="file" id="materialImageUpload" accept="image/gif, image/jpeg, image/png" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                     </div>
                 </div>
 
@@ -230,6 +232,10 @@
         // Tạo một canvas ẩn để lưu trữ mask/vùng vẽ tự do cho Vector Field
         const maskCanvas = document.createElement('canvas');
         const maskCtx = maskCanvas.getContext('2d');
+        
+        // THÊM: Canvas tạm dùng để vẽ ImageData của frame GIF
+        const gifDrawCanvas = document.createElement('canvas');
+        const gifDrawCtx = gifDrawCanvas.getContext('2d');
 
         let animationFrameId = null;
         let isSimulating = false;
@@ -256,6 +262,11 @@
 
         let flowIntensity = 0.7; 
         let currentDrawThickness = 3;
+        
+        // --- BIẾN MỚI CHO HỖ TRỢ GIF ĐỘNG ---
+        let gifFrames = []; // Mảng chứa các frame (ImageData, delay, dims)
+        let currentGifFrameIndex = 0;
+        let gifFrameTimer = 0;
         
         // --- CÁC HÀM TIỆN ÍCH ---
 
@@ -403,6 +414,21 @@
          */
         function updateParticles() {
             simTime += 0.01;
+
+            // THÊM: LOGIC CẬP NHẬT FRAME GIF ĐỘNG
+            if (gifFrames.length > 0) {
+                // Tăng bộ đếm thời gian. Giả định update chạy ~30-60 lần/giây (16ms-33ms)
+                gifFrameTimer += 16.67; 
+                
+                const currentDelay = gifFrames[currentGifFrameIndex].delay;
+                
+                if (gifFrameTimer >= currentDelay) {
+                    currentGifFrameIndex = (currentGifFrameIndex + 1) % gifFrames.length;
+                    gifFrameTimer = 0;
+                }
+            }
+            // KẾT THÚC LOGIC CẬP NHẬT FRAME GIF ĐỘNG
+            
             particles.forEach(p => {
                 const pathObj = flowPaths[p.pathIndex]; 
                 if (!pathObj) return;
@@ -479,7 +505,7 @@
                     pointsToExamine.push({point: path.points[lastIndex], index: lastIndex});
                 }
 
-                pointsToExamine.forEach(({point, index}) => {
+                pointsToDraw.forEach(({point, index}) => {
                     const dist = distance(point, { x, y });
 
                     if (dist < minDist) {
@@ -621,14 +647,39 @@
                         ctx.translate(x, y); // DI CHUYỂN đến tâm hạt
                         ctx.rotate(p.rotation); // XOAY hạt
 
-                        if (materialImage.complete && materialImage.naturalWidth !== 0) {
-                            // Vẽ ảnh vật liệu từ tâm mới (-halfSize, -halfSize)
+                        // --- LOGIC VẼ HẠT NÂNG CẤP (HỖ TRỢ GIF ĐỘNG) ---
+                        if (gifFrames.length > 0) {
+                            // Nếu có frame GIF, vẽ frame hiện tại
+                            const currentFrame = gifFrames[currentGifFrameIndex];
+                            
+                            // Đảm bảo canvas tạm có kích thước phù hợp
+                            if (gifDrawCanvas.width !== currentFrame.dims.width || gifDrawCanvas.height !== currentFrame.dims.height) {
+                                gifDrawCanvas.width = currentFrame.dims.width;
+                                gifDrawCanvas.height = currentFrame.dims.height;
+                            }
+                            
+                            // Đặt ImageData lên canvas nhỏ
+                            gifDrawCtx.putImageData(currentFrame.imageData, 0, 0);
+
+                            // Vẽ canvas nhỏ đã chứa frame GIF lên canvas chính
+                            ctx.drawImage(
+                                gifDrawCanvas, 
+                                -halfSize, // Vị trí x sau khi dịch chuyển (-halfSize để căn giữa)
+                                -halfSize, // Vị trí y sau khi dịch chuyển
+                                size,      // Chiều rộng đích (đã tính theo kích thước hạt)
+                                size       // Chiều cao đích
+                            );
+                            
+                        } else if (materialImage.complete && materialImage.naturalWidth !== 0) {
+                            // Nếu không có GIF (ảnh tĩnh), vẽ ảnh như bình thường
                             ctx.drawImage(materialImage, -halfSize, -halfSize, size, size); 
                         } else {
-                            // Màu và hình dạng giống dăm gỗ (nếu không có ảnh)
+                            // Vẽ màu mặc định nếu không có ảnh
                             ctx.fillStyle = '#b8860b'; // Màu vàng nâu (DarkGoldenrod)
                             ctx.fillRect(-halfSize, -halfSize, size, size); 
                         }
+                        // --- KẾT THÚC LOGIC VẼ HẠT NÂNG CẤP ---
+                        
                         ctx.restore(); // KHÔI PHỤC trạng thái canvas ban đầu
                     }
                 });
@@ -1025,16 +1076,62 @@
             }
         });
 
-        materialImageUpload.addEventListener('change', (e) => {
+        // CHỈNH SỬA: LOGIC TẢI LÊN VẬT LIỆU (HỖ TRỢ GIF ĐỘNG)
+        materialImageUpload.addEventListener('change', async (e) => {
             const file = e.target.files[0];
+            gifFrames = []; // Reset các frame cũ
+            currentGifFrameIndex = 0; // Reset chỉ mục
+
             if (file) {
-                materialImage.src = URL.createObjectURL(file);
-                materialImage.onload = () => {
+                if (file.type === 'image/gif') {
+                    statusMessage.textContent = "⏳ Đang Giải Mã Tệp GIF (Vật Liệu)...";
+                    
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        try {
+                            // Sử dụng thư viện GIF Decoder
+                            const gif = new GIF(event.target.result);
+                            const frames = gif.decompressFrames(true); 
+                            
+                            gifFrames = frames.map(frame => {
+                                // Tạo ImageData từ dữ liệu patch
+                                const imageData = frame.patch; 
+                                const data = new ImageData(new Uint8ClampedArray(imageData), frame.dims.width, frame.dims.height);
+                                
+                                return {
+                                    imageData: data, 
+                                    delay: frame.delay, // Độ trễ của frame
+                                    dims: frame.dims // Kích thước và vị trí trong GIF
+                                };
+                            });
+                            
+                            if (gifFrames.length > 0) {
+                                materialImage.src = URL.createObjectURL(file);
+                                materialImage.onload = () => {
+                                    statusMessage.textContent = `✅ Tải lên GIF thành công (${gifFrames.length} frame)! Vật liệu động đã sẵn sàng.`;
+                                    draw(); 
+                                };
+                            } else {
+                                statusMessage.textContent = "⚠️ Không thể giải mã tệp GIF.";
+                            }
+                        } catch (error) {
+                            statusMessage.textContent = "❌ Lỗi khi xử lý tệp GIF.";
+                            console.error("GIF decoding error:", error);
+                        }
+                    };
+                    reader.readAsArrayBuffer(file); // Bắt đầu đọc tệp GIF
+                    
+                } else {
+                    // Xử lý ảnh tĩnh như bình thường
                     statusMessage.textContent = "Ảnh vật liệu đã tải lên.";
-                    draw();
-                };
+                    materialImage.src = URL.createObjectURL(file);
+                    materialImage.onload = () => {
+                        draw();
+                    };
+                }
             }
         });
+
 
         speedControl.addEventListener('input', (e) => {
             currentParticleSpeed = PARTICLE_SPEED_BASE * parseFloat(e.target.value);
@@ -1057,6 +1154,9 @@
         resetPathsButton.addEventListener('click', () => {
             flowPaths = [];
             particles = [];
+            gifFrames = []; // Reset frame GIF
+            currentGifFrameIndex = 0;
+            gifFrameTimer = 0;
             isSimulating = false;
             isPathMode = false;
             isVectorMode = false;
@@ -1093,7 +1193,7 @@
             draw();
         });
 
-        // --- HÀM TẠO VÀ XUẤT GIF ---
+        // --- HÀM TẠO VÀ XUẤT GIF (ĐÃ TỐI ƯU) ---
         generateGifButton.addEventListener('click', async () => {
             if (flowPaths.length === 0) {
                 alert("Vui lòng vẽ ít nhất một vùng mô phỏng trước.");
@@ -1101,14 +1201,19 @@
             }
 
             const wasSimulating = isSimulating;
-            if (wasSimulating) {
-                isSimulating = false;
-                cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
-                startStopSimButton.textContent = 'TIẾP TỤC Mô Phỏng';
-                startStopSimButton.classList.remove('bg-red-600');
-                startStopSimButton.classList.add('bg-green-600');
-            }
+            const originalParticles = JSON.parse(JSON.stringify(particles)); // Sao chép sâu trạng thái hạt ban đầu
+            const originalSimTime = simTime; // Sao chép thời gian mô phỏng ban đầu
+            const originalGifFrameIndex = currentGifFrameIndex;
+            const originalGifFrameTimer = gifFrameTimer;
+
+            // Vô hiệu hóa/Tạm dừng mô phỏng thực để tạo GIF độc lập
+            isSimulating = false;
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+
+            startStopSimButton.textContent = 'TIẾP TỤC Mô Phỏng';
+            startStopSimButton.classList.remove('bg-red-600');
+            startStopSimButton.classList.add('bg-green-600');
             
             statusMessage.textContent = "⏳ Đang Tạo GIF... Quá trình này có thể mất vài giây.";
             generateGifButton.disabled = true;
@@ -1120,31 +1225,57 @@
                 height: canvas.height
             });
 
-            const FRAMES = 150; 
-            const delay = 33;   
+            const FRAMES = 150; // Tổng số frame (5 giây @ 30fps)
+            const delay = 33;   // Độ trễ mặc định (khoảng 30fps)
 
-            const initialParticlesState = JSON.parse(JSON.stringify(particles)); 
+            let tempParticles = originalParticles;
+            let tempSimTime = originalSimTime; 
+            let tempGifFrameIndex = originalGifFrameIndex;
+            let tempGifFrameTimer = originalGifFrameTimer;
+
+            // Sử dụng một canvas tạm để vẽ frame, tránh ảnh hưởng đến canvas chính
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
             
-            let tempParticles = JSON.parse(JSON.stringify(initialParticlesState));
-            let tempSimTime = simTime; 
-
             for (let i = 0; i < FRAMES; i++) {
                 
                 // Cập nhật hạt (chỉ dành cho GIF)
                 tempSimTime += 0.01;
+                
+                // THÊM: LOGIC CẬP NHẬT FRAME GIF ĐỘNG TẠM THỜI
+                if (gifFrames.length > 0) {
+                    tempGifFrameTimer += delay; // Giả định mỗi frame GIF có độ trễ 33ms (delay của GIF worker)
+                    
+                    const currentDelay = gifFrames[tempGifFrameIndex].delay;
+                    
+                    if (tempGifFrameTimer >= currentDelay) {
+                        tempGifFrameIndex = (tempGifFrameIndex + 1) % gifFrames.length;
+                        tempGifFrameTimer = 0;
+                    }
+                }
+
                 tempParticles.forEach(p => {
                     const pathObj = flowPaths[p.pathIndex]; 
                     if (!pathObj) return;
 
+                    // --- CẬP NHẬT HẠT LINE (Đảm bảo đồng bộ với logic gốc) ---
                     if (p.type === 'line') {
                         p.t += currentParticleSpeed;
                         p.rotation += p.rotationSpeed * 0.1;
-                        if (p.t > 1) { p.t = p.t - 1; p.t += (Math.random() * currentParticleSpeed * 5); }
-                    } else if (p.type === 'vector' && pathObj.direction) {
+                        if (p.t > 1) { 
+                            p.t = p.t - 1; 
+                            p.t += (Math.random() * currentParticleSpeed * 5); 
+                        }
+                    } 
+                    // --- CẬP NHẬT HẠT VECTOR (Đảm bảo đồng bộ với logic gốc) ---
+                    else if (p.type === 'vector' && pathObj.direction) {
                         const speed = currentParticleSpeed * 50; 
                         const bounds = pathObj.bounds;
                         let dx = 0;
                         let dy = 0;
+                        // Sử dụng tempSimTime để tính toán nhiễu động
                         const noise = { x: Math.sin(tempSimTime * 10 + p.offset) * 0.5, y: Math.cos(tempSimTime * 10 + p.offset) * 0.5 };
                         
                         switch (pathObj.direction) {
@@ -1164,38 +1295,38 @@
                         if (dy > 0 && p.y > bounds.maxY) p.y = bounds.minY;
                         else if (dy < 0 && p.y < bounds.minY) p.y = bounds.maxY;
                         
-                        // Kiểm tra mask (sử dụng logic đơn giản hơn cho GIF worker)
                         if (!isPointInVectorMask(p.x, p.y, pathObj)) {
                             let attempts = 0;
                             do {
                                 p.x = lerp(bounds.minX, bounds.maxX, Math.random());
                                 p.y = lerp(bounds.minY, bounds.maxY, Math.random());
                                 attempts++;
-                            } while (!isPointInVectorMask(p.x, p.y, pathObj) && attempts < 5); // Giảm attempts cho worker
+                            } while (!isPointInVectorMask(p.x, p.y, pathObj) && attempts < 5);
                         }
                     }
                 });
 
-                // Vẽ Frame (lặp lại logic draw cơ bản)
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // --- VẼ FRAME LÊN CANVAS TẠM ---
+                tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
                 
-                let drawArea = { x: 0, y: 0, w: canvas.width, h: canvas.height, offsetX: 0, offsetY: 0 };
+                // Logic vẽ hình nền (lặp lại draw cơ bản)
+                let drawArea = { x: 0, y: 0, w: tempCanvas.width, h: tempCanvas.height, offsetX: 0, offsetY: 0 };
                 if (baseImage.complete && baseImage.naturalWidth !== 0) {
                     const aspectRatio = baseImage.naturalWidth / baseImage.naturalHeight;
-                    if (canvas.width / canvas.height > aspectRatio) {
-                        drawArea.h = canvas.height;
+                    if (tempCanvas.width / tempCanvas.height > aspectRatio) {
+                        drawArea.h = tempCanvas.height;
                         drawArea.w = drawArea.h * aspectRatio;
-                        drawArea.offsetX = (canvas.width - drawArea.w) / 2;
+                        drawArea.offsetX = (tempCanvas.width - drawArea.w) / 2;
                     } else {
-                        drawArea.w = canvas.width;
+                        drawArea.w = tempCanvas.width;
                         drawArea.h = drawArea.w / aspectRatio;
-                        drawArea.offsetY = (canvas.height - drawArea.h) / 2;
+                        drawArea.offsetY = (tempCanvas.height - drawArea.h) / 2;
                     }
-                    ctx.drawImage(baseImage, drawArea.offsetX, drawArea.offsetY, drawArea.w, drawArea.h);
+                    tempCtx.drawImage(baseImage, drawArea.offsetX, drawArea.offsetY, drawArea.w, drawArea.h);
                 }
                 
                 // Vẽ hạt
-                ctx.globalAlpha = flowIntensity;
+                tempCtx.globalAlpha = flowIntensity;
                 tempParticles.forEach(p => {
                     const pathObj = flowPaths[p.pathIndex]; 
                     if (!pathObj) return;
@@ -1213,38 +1344,67 @@
                         const noiseX = p.type === 'line' ? Math.sin(p.t * 50 + tempSimTime) * 3 * p.offset : 0;
                         const noiseY = p.type === 'line' ? Math.cos(p.t * 30 + tempSimTime) * 3 * p.offset : 0;
                         
-                        const x = pos.x + noiseX; // Vị trí trung tâm
+                        const x = pos.x + noiseX; 
                         const y = pos.y + noiseY;
 
-                        ctx.save();
-                        ctx.translate(x, y); 
-                        ctx.rotate(p.rotation); 
+                        tempCtx.save();
+                        tempCtx.translate(x, y); 
+                        tempCtx.rotate(p.rotation); 
 
-                        if (materialImage.complete && materialImage.naturalWidth !== 0) {
-                            ctx.drawImage(materialImage, -halfSize, -halfSize, size, size);
+                        // --- LOGIC VẼ HẠT NÂNG CẤP (HỖ TRỢ GIF ĐỘNG) TRONG GIF EXPORT ---
+                        if (gifFrames.length > 0) {
+                            const currentFrame = gifFrames[tempGifFrameIndex];
+                            
+                            // Đảm bảo canvas tạm có kích thước phù hợp
+                            if (gifDrawCanvas.width !== currentFrame.dims.width || gifDrawCanvas.height !== currentFrame.dims.height) {
+                                gifDrawCanvas.width = currentFrame.dims.width;
+                                gifDrawCanvas.height = currentFrame.dims.height;
+                            }
+                            
+                            gifDrawCtx.putImageData(currentFrame.imageData, 0, 0);
+
+                            tempCtx.drawImage(
+                                gifDrawCanvas, 
+                                -halfSize, 
+                                -halfSize, 
+                                size,      
+                                size       
+                            );
+                            
+                        } else if (materialImage.complete && materialImage.naturalWidth !== 0) {
+                            tempCtx.drawImage(materialImage, -halfSize, -halfSize, size, size);
                         } else {
-                            ctx.fillStyle = '#b8860b'; 
-                            ctx.fillRect(-halfSize, -halfSize, size, size); 
+                            tempCtx.fillStyle = '#b8860b'; 
+                            tempCtx.fillRect(-halfSize, -halfSize, size, size); 
                         }
-                        ctx.restore();
+                        // --- KẾT THÚC LOGIC VẼ HẠT NÂNG CẤP TRONG GIF EXPORT ---
+
+                        tempCtx.restore();
                     }
                 });
-                ctx.globalAlpha = 1.0; 
+                tempCtx.globalAlpha = 1.0; 
                 
-                gif.addFrame(ctx, { delay: delay, copy: true });
+                // Thêm frame từ canvas tạm
+                gif.addFrame(tempCanvas, { delay: delay, copy: true });
                 
                 statusMessage.textContent = `⏳ Đang Tạo GIF... (${Math.round((i + 1) / FRAMES * 100)}%)`;
+                // Cho phép worker của GIF chạy
                 await new Promise(resolve => setTimeout(resolve, 1)); 
             }
             
-            // Khôi phục trạng thái mô phỏng
-            particles = initialParticlesState;
-            simTime = tempSimTime;
+            // --- KHÔI PHỤC TRẠNG THÁI ---
+            particles = originalParticles; // Khôi phục trạng thái hạt trước khi tạo GIF
+            simTime = originalSimTime;     // Khôi phục thời gian mô phỏng
+            currentGifFrameIndex = originalGifFrameIndex;
+            gifFrameTimer = originalGifFrameTimer;
             isSimulating = wasSimulating; 
+
             if (isSimulating) {
+                // Tiếp tục mô phỏng nếu nó đang chạy trước đó
                 animate();
             } else {
-                draw();
+                // Chỉ vẽ lại frame cuối cùng
+                draw(); 
             }
 
             // Kết xuất GIF
