@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PRO FIX - Mô Phỏng Dòng Chảy Vật Liệu</title>
+    <title>PRO FIX - Mô Phỏng Dòng Chảy Vật Liệu Trên Video</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/gifuct-js@2.1.2/dist/gifuct-js.min.js"></script> 
     <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/gif.js"></script>
     <style>
         .drawing-mode { cursor: crosshair !important; }
@@ -27,10 +26,12 @@
 </head>
 <body class="flow-container">
 
+    <video id="bgVideoElement" style="display:none;" loop muted></video>
+
     <div class="header-bg mb-6">
         <div class="max-w-7xl mx-auto px-6">
-            <h1 class="text-3xl font-bold">MÔ PHỎNG DÒNG CHẢY (BẢN FIX TRIỆT ĐỂ)</h1>
-            <p class="text-gray-400 text-sm mt-1">Hỗ trợ upload GIF (kể cả GIF phức tạp) & Vẽ vùng tự do</p>
+            <h1 class="text-3xl font-bold">MÔ PHỎNG DÒNG CHẢY TRÊN VIDEO (BẢN FIX)</h1>
+            <p class="text-gray-400 text-sm mt-1">Hỗ trợ upload Video MP4/WebM và Ảnh tĩnh</p>
         </div>
     </div>
     
@@ -42,8 +43,8 @@
                 <div class="space-y-3 border-b pb-4">
                     <p class="text-xs font-bold text-gray-400 uppercase">1. Upload File</p>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Ảnh Nền / GIF Động</label>
-                        <input type="file" id="baseImageUpload" accept="image/png, image/jpeg, image/gif" class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Video Nền (MP4/WebM) / Ảnh Tĩnh</label>
+                        <input type="file" id="baseImageUpload" accept="video/mp4, video/webm, image/png, image/jpeg" class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Vật Liệu (Ảnh tĩnh)</label>
@@ -92,7 +93,7 @@
 
             <div class="lg:w-3/4 relative order-1 lg:order-2">
                  <div id="msgStatus" class="mb-2 text-center text-sm font-semibold text-indigo-800 bg-indigo-100 p-2 rounded">
-                    👋 Vui lòng tải lên ảnh nền để bắt đầu.
+                    👋 Vui lòng tải lên video hoặc ảnh nền để bắt đầu.
                 </div>
 
                 <div class="relative border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-white shadow-inner flex items-center justify-center" style="height: 70vh;">
@@ -126,15 +127,15 @@
         const maskCanvas = document.createElement('canvas');
         const maskCtx = maskCanvas.getContext('2d');
 
+        const bgVideoElement = document.getElementById('bgVideoElement');
+
         let state = {
             isSimulating: false,
             mode: 'idle', // idle, line, vector
             isDrawing: false,
             
-            bgType: 'none', // none, image, gif
-            bgImage: null,   // Dùng cho ảnh tĩnh hoặc fallback của GIF
-            bgGifFrames: [], 
-            bgGifDuration: 0,
+            bgType: 'none', // none, image, video
+            bgImage: null,   // Dùng cho ảnh tĩnh
             
             materialImage: null,
             paths: [],
@@ -158,129 +159,78 @@
             placeholder: document.getElementById('txtPlaceholder')
         };
 
-        // --- 2. XỬ LÝ GIF NÂNG CAO & DỰ PHÒNG (FIX LỖI UPLOAD) ---
+        // --- 2. XỬ LÝ UPLOAD (HỖ TRỢ VIDEO) ---
 
-        // Hàm parse GIF an toàn
-        const parseGif = (buffer) => {
-            try {
-                // Sử dụng hàm giải nén của thư viện
-                const gif = new GIF(buffer);
-                return gif.decompressFrames(true);
-            } catch (e) {
-                console.warn("Lỗi khi giải mã frame GIF, chuyển sang chế độ ảnh tĩnh.", e);
-                return null;
-            }
-        };
-
-        // Hàm tạo frames từ dữ liệu thô
-        const createGifFrames = async (frames, width, height) => {
-            const loadedFrames = [];
-            let totalTime = 0;
-
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = width;
-            tempCanvas.height = height;
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // Xóa frame cũ để xử lý disposal method
-            tempCtx.clearRect(0, 0, width, height); 
-
-            for (let i = 0; i < frames.length; i++) {
-                const frame = frames[i];
-                
-                // 1. Tạo ImageData và ImageBitmap (Vẽ nhanh)
-                const patchData = new ImageData(
-                    new Uint8ClampedArray(frame.patch),
-                    frame.dims.width,
-                    frame.dims.height
-                );
-                const patchBitmap = await createImageBitmap(patchData);
-
-                // 2. Vẽ patch lên canvas tạm (Đây là bước quan trọng để xử lý GIF transparent)
-                // Lưu ý: GIF disposal method = 2 (restore to background) cần thêm logic. 
-                // Ở đây, ta giả định đa số là vẽ chồng lên (draw over) hoặc clear to first frame/black.
-                
-                // Cập nhật lại canvas tạm
-                tempCtx.drawImage(patchBitmap, frame.dims.left, frame.dims.top);
-
-                // 3. Lưu lại trạng thái đầy đủ của frame này
-                const fullFrameBitmap = await createImageBitmap(tempCanvas);
-
-                loadedFrames.push({
-                    bitmap: fullFrameBitmap,
-                    delay: frame.delay || 100
-                });
-                totalTime += (frame.delay || 100);
-            }
-            return { frames: loadedFrames, duration: totalTime };
-        };
-
-        // Upload Handler (FIX LỖI)
         document.getElementById('baseImageUpload').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
             ui.loader.classList.remove('hidden');
-            ui.loaderText.textContent = "Đang tải ảnh (Bước 1/2)...";
+            ui.loaderText.textContent = "Đang tải file...";
             ui.placeholder.classList.add('hidden');
             
-            // 1. Dùng FileReader để lấy URL và Buffer cùng lúc
-            const reader = new FileReader();
-            reader.onload = async function() {
-                const imgURL = URL.createObjectURL(file);
-                
-                // 1a. Tải ảnh bằng Image object (Lấy kích thước & Fallback)
-                const img = new Image();
-                img.src = imgURL;
-                await new Promise(resolve => img.onload = resolve);
-                
-                state.bgImage = await createImageBitmap(img); // Sử dụng bitmap để vẽ nhanh hơn
-                resizeCanvas(img.naturalWidth, img.naturalHeight);
-                enableTools(true);
-                drawMain(); // Hiển thị ảnh tĩnh ngay lập tức
-
-                if (file.type === 'image/gif') {
-                    ui.loaderText.textContent = "Đang phân tích GIF (Bước 2/2)...";
-                    const buffer = reader.result; // ArrayBuffer
-                    const rawFrames = parseGif(buffer);
-
-                    if (rawFrames && rawFrames.length > 0) {
-                        try {
-                            const result = await createGifFrames(rawFrames, img.naturalWidth, img.naturalHeight);
-                            state.bgGifFrames = result.frames;
-                            state.bgGifDuration = result.duration;
-                            state.bgType = 'gif';
-                            ui.msg.textContent = `✅ Đã tải GIF nền (${result.frames.length} frames). Sẵn sàng vẽ vùng mô phỏng.`;
-                        } catch(err) {
-                            // Lỗi ở bước tạo Bitmap từ frame
-                            console.error("Lỗi tạo frame Bitmap:", err);
-                            state.bgType = 'image';
-                            ui.msg.textContent = "⚠️ Tải thành công nhưng không thể giải mã các frame GIF. Sẽ sử dụng ảnh tĩnh để mô phỏng.";
-                        }
-                    } else {
-                        // Lỗi ở bước parse GIF
-                        state.bgType = 'image';
-                        ui.msg.textContent = "⚠️ GIF quá phức tạp, không thể phân tích frame. Sẽ sử dụng ảnh tĩnh để mô phỏng.";
-                    }
-                } else {
-                    // Ảnh tĩnh
+            try {
+                if (file.type.startsWith('video/')) {
+                    // --- Xử lý Video ---
+                    bgVideoElement.src = URL.createObjectURL(file);
+                    
+                    // Chờ video tải metadata để lấy kích thước
+                    await new Promise(resolve => bgVideoElement.onloadedmetadata = resolve); 
+                    
+                    resizeCanvas(bgVideoElement.videoWidth, bgVideoElement.videoHeight);
+                    
+                    // Bắt đầu chơi video (play() phải nằm trong 1 tương tác người dùng - ở đây là click upload)
+                    await bgVideoElement.play().catch(e => {
+                        console.error("Lỗi Playback Video (thường do không được phép tự động phát):", e);
+                        ui.msg.textContent = "⚠️ Tải video thành công nhưng cần bấm nút ▶ BẮT ĐẦU MÔ PHỎNG để video chạy.";
+                    }); 
+                    
+                    state.bgType = 'video';
+                    state.bgImage = null; // Clear ảnh tĩnh
+                    state.time = 0;
+                    
+                    ui.msg.textContent = `✅ Đã tải Video (${bgVideoElement.videoWidth}x${bgVideoElement.videoHeight}). Bắt đầu vẽ đường dẫn!`;
+                    
+                } else if (file.type.startsWith('image/')) {
+                    // --- Xử lý Ảnh Tĩnh ---
+                    bgVideoElement.pause();
+                    bgVideoElement.src = ""; // Clear video source
+                    
+                    const img = new Image();
+                    img.src = URL.createObjectURL(file);
+                    await new Promise(resolve => img.onload = resolve);
+                    
+                    state.bgImage = await createImageBitmap(img); 
+                    resizeCanvas(img.naturalWidth, img.naturalHeight);
                     state.bgType = 'image';
+                    
                     ui.msg.textContent = "✅ Đã tải ảnh nền tĩnh. Sẵn sàng vẽ.";
+                } else {
+                    throw new Error("Định dạng file không hỗ trợ.");
                 }
-                
+
+                enableTools(true);
+                // Đảm bảo loop chạy cho video
+                if (state.bgType === 'video' && !state.isSimulating) {
+                     state.isSimulating = true;
+                     ui.btnSim.textContent = "⏸ TẠM DỪNG";
+                     loop();
+                } else {
+                    drawMain();
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert("Không thể đọc file này. Vui lòng thử file MP4/WebM hoặc ảnh JPG/PNG khác.");
+                ui.msg.textContent = "❌ Lỗi đọc file.";
+            } finally {
                 ui.loader.classList.add('hidden');
-            };
-            
-            // Đọc cả dưới dạng URL (cho Image object) và ArrayBuffer (cho gifuct-js)
-            reader.readAsArrayBuffer(file);
+            }
         });
-        
-        // ... (Giữ nguyên các hàm khác như resizeCanvas, enableTools, getPos, setMode, update, drawMain, và Export GIF)
 
         document.getElementById('materialImageUpload').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) {
-                // Tải vật liệu dưới dạng ImageBitmap
                 const img = new Image();
                 img.src = URL.createObjectURL(file);
                 await new Promise(resolve => img.onload = resolve);
@@ -288,6 +238,8 @@
                 drawMain();
             }
         });
+
+        // --- 3. LOGIC HỆ THỐNG & VẼ ---
 
         function resizeCanvas(w, h) {
             const parent = canvas.parentElement;
@@ -313,17 +265,6 @@
             ui.btnSim.disabled = !enable;
         }
 
-        // --- CÔNG CỤ VẼ ---
-        const getPos = (e) => {
-            const r = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / r.width;
-            const scaleY = canvas.height / r.height;
-            return {
-                x: (e.clientX - r.left) * scaleX,
-                y: (e.clientY - r.top) * scaleY
-            };
-        };
-
         ui.btnLine.addEventListener('click', () => setMode('line'));
         ui.btnVector.addEventListener('click', () => setMode('vector'));
         document.getElementById('btnReset').addEventListener('click', () => {
@@ -341,6 +282,7 @@
                 : "🖌️ Vẽ Vùng: Vẽ vòng tròn khép kín để chứa hạt.";
         }
 
+        // --- Sự kiện chuột vẽ --- (Giữ nguyên logic vẽ path)
         canvas.addEventListener('mousedown', e => {
             if(state.mode === 'idle') return;
             state.isDrawing = true;
@@ -393,6 +335,17 @@
             drawMain();
         });
 
+        const getPos = (e) => {
+            const r = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / r.width;
+            const scaleY = canvas.height / r.height;
+            return {
+                x: (e.clientX - r.left) * scaleX,
+                y: (e.clientY - r.top) * scaleY
+            };
+        };
+
+        // --- Logic tính toán đường đi --- (Giữ nguyên)
         function initLinePath(path) {
             let total = 0;
             path.dists = [0];
@@ -442,7 +395,6 @@
                 for(let k=0; k<10; k++){
                     p.x = path.bounds.minX + Math.random()*path.bounds.w;
                     p.y = path.bounds.minY + Math.random()*path.bounds.h;
-                    // Kiểm tra sơ bộ:
                     if(p.x >= path.bounds.minX && p.x <= path.bounds.maxX && p.y >= path.bounds.minY && p.y <= path.bounds.maxY) { 
                         ok = true; break; 
                     }
@@ -456,6 +408,11 @@
         ui.btnSim.addEventListener('click', () => {
             state.isSimulating = !state.isSimulating;
             ui.btnSim.textContent = state.isSimulating ? "⏸ TẠM DỪNG" : "▶ TIẾP TỤC";
+            
+            if (state.bgType === 'video') {
+                state.isSimulating ? bgVideoElement.play() : bgVideoElement.pause();
+            }
+
             if(state.isSimulating) loop();
             else cancelAnimationFrame(animFrameId);
         });
@@ -502,21 +459,11 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             // 1. Vẽ Nền
-            if (state.bgType === 'image' && state.bgImage) {
-                ctx.drawImage(state.bgImage, 0, 0, canvas.width, canvas.height);
+            if (state.bgType === 'video' && bgVideoElement.readyState > 1) { // readyState > 1 (HAVE_METADATA)
+                ctx.drawImage(bgVideoElement, 0, 0, canvas.width, canvas.height);
             } 
-            else if (state.bgType === 'gif' && state.bgGifFrames.length > 0) {
-                const dur = state.bgGifDuration || 1000;
-                const t = state.time % dur;
-                let acc = 0;
-                let frame = state.bgGifFrames[0];
-                for(let f of state.bgGifFrames) {
-                    acc += f.delay;
-                    if(acc >= t) { frame = f; break; }
-                    // Fix: Đảm bảo frame đầu tiên được vẽ nếu t < delay của frame 0
-                    if (i === 0 && t < f.delay) { frame = f; break; } 
-                }
-                ctx.drawImage(frame.bitmap, 0, 0, canvas.width, canvas.height);
+            else if (state.bgType === 'image' && state.bgImage) {
+                ctx.drawImage(state.bgImage, 0, 0, canvas.width, canvas.height);
             }
 
             // 2. Vẽ nét đang vẽ
@@ -577,19 +524,19 @@
             });
         }
 
-        // --- EXPORT GIF ---
+        // --- EXPORT GIF (HỖ TRỢ VIDEO FRAME CAPTURE) ---
         ui.btnExport.addEventListener('click', async () => {
-             if (state.bgType !== 'gif') {
-                alert("Chức năng xuất GIF nền động yêu cầu ảnh nền phải là file GIF đã được phân tích thành công!");
-                // Vẫn cho phép xuất, nhưng nó sẽ là nền tĩnh
+            if (state.bgType === 'none' || state.paths.length === 0) {
+                 alert("Vui lòng tải lên video/ảnh và vẽ đường dẫn mô phỏng trước khi xuất file.");
+                 return;
             }
             
+            const isVideoExport = state.bgType === 'video';
             const gif = new GIF({
                 workers: 2,
-                quality: 10,
+                quality: isVideoExport ? 5 : 10, // Giảm quality khi export video để tiết kiệm bộ nhớ
                 width: canvas.width,
                 height: canvas.height,
-                // Sử dụng CDN chuẩn cho worker
                 workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/gif.worker.js' 
             });
 
@@ -597,22 +544,59 @@
             ui.loaderText.textContent = "Đang render GIF...";
             
             const fps = 20;
-            const frames = 3 * fps;
             const dt = 1000 / fps;
+            const totalSeconds = 3; // Xuất 3 giây
+            const totalFrames = totalSeconds * fps;
             
+            // Backup time và pause video nếu cần
             const realTime = state.time;
-            
-            for(let i=0; i<frames; i++) {
+            let wasPlaying = false;
+            if(isVideoExport) {
+                wasPlaying = !bgVideoElement.paused;
+                bgVideoElement.pause();
+            }
+
+            for(let i=0; i<totalFrames; i++) {
+                
+                // 1. Cập nhật thời gian và vị trí frame video
+                if (isVideoExport) {
+                    const targetTime = (i * dt) / 1000; // time in seconds
+                    // Đảm bảo thời gian lặp lại trong video duration
+                    bgVideoElement.currentTime = targetTime % bgVideoElement.duration; 
+                    
+                    // Chờ frame video được cập nhật trước khi vẽ (sử dụng onseeked)
+                    await new Promise(resolve => {
+                        bgVideoElement.onseeked = resolve;
+                        // Trường hợp onseeked không chạy, dùng fallback
+                        setTimeout(resolve, 30); 
+                    });
+                }
+                
+                // 2. Cập nhật vị trí hạt
                 state.time += dt;
                 update(dt); 
+                
+                // 3. Vẽ lên canvas
                 drawMain(); 
+                
+                // 4. Thêm frame vào GIF
                 gif.addFrame(ctx, {copy: true, delay: dt});
                 
-                ui.loaderText.textContent = `Rendering ${(i/frames*100)|0}%`;
+                ui.loaderText.textContent = `Rendering ${(i/totalFrames*100)|0}%`;
                 await new Promise(r => setTimeout(r, 0));
             }
 
+            // Restore trạng thái
             state.time = realTime;
+            if(isVideoExport && wasPlaying) {
+                bgVideoElement.play();
+            } else if (isVideoExport) {
+                // Đảm bảo video đang ở thời điểm đúng sau khi xuất
+                bgVideoElement.currentTime = realTime / 1000 % bgVideoElement.duration;
+            }
+            // Khởi chạy lại loop nếu nó bị tắt
+            if (state.isSimulating) loop();
+
 
             ui.loaderText.textContent = "Encoding...";
             gif.on('finished', blob => {
@@ -625,7 +609,9 @@
 
             gif.render();
         });
-
+        
+        // Khởi tạo ban đầu
+        window.addEventListener('resize', resizeCanvas);
     </script>
 </body>
 </html>
