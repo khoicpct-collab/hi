@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PRO FIX - Mô Phỏng Dòng Chảy Vật Liệu Trên Video</title>
+    <title>FINAL FIX - Mô Phỏng Dòng Chảy Vật Liệu Trên Video</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/gif.js"></script>
     <style>
@@ -30,8 +30,8 @@
 
     <div class="header-bg mb-6">
         <div class="max-w-7xl mx-auto px-6">
-            <h1 class="text-3xl font-bold">MÔ PHỎNG DÒNG CHẢY TRÊN VIDEO (BẢN FIX)</h1>
-            <p class="text-gray-400 text-sm mt-1">Hỗ trợ upload Video MP4/WebM và Ảnh tĩnh</p>
+            <h1 class="text-3xl font-bold">MÔ PHỎNG DÒNG CHẢY TRÊN VIDEO (BẢN FINAL FIX)</h1>
+            <p class="text-gray-400 text-sm mt-1">Hỗ trợ Video (Nền Động) và Ảnh Tĩnh/GIF (Nền Tĩnh)</p>
         </div>
     </div>
     
@@ -43,8 +43,8 @@
                 <div class="space-y-3 border-b pb-4">
                     <p class="text-xs font-bold text-gray-400 uppercase">1. Upload File</p>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Video Nền (MP4/WebM) / Ảnh Tĩnh</label>
-                        <input type="file" id="baseImageUpload" accept="video/mp4, video/webm, image/png, image/jpeg" class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Video Nền / Ảnh Tĩnh / GIF</label>
+                        <input type="file" id="baseImageUpload" accept="video/mp4, video/webm, image/png, image/jpeg, image/gif" class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Vật Liệu (Ảnh tĩnh)</label>
@@ -131,11 +131,11 @@
 
         let state = {
             isSimulating: false,
-            mode: 'idle', // idle, line, vector
+            mode: 'idle', 
             isDrawing: false,
             
             bgType: 'none', // none, image, video
-            bgImage: null,   // Dùng cho ảnh tĩnh
+            bgImage: null,   // Dùng cho ảnh tĩnh (bao gồm cả GIF/PNG/JPG)
             
             materialImage: null,
             paths: [],
@@ -159,7 +159,7 @@
             placeholder: document.getElementById('txtPlaceholder')
         };
 
-        // --- 2. XỬ LÝ UPLOAD (HỖ TRỢ VIDEO) ---
+        // --- 2. XỬ LÝ UPLOAD (HỖ TRỢ VIDEO & IMAGE/GIF AN TOÀN) ---
 
         document.getElementById('baseImageUpload').addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -171,28 +171,24 @@
             
             try {
                 if (file.type.startsWith('video/')) {
-                    // --- Xử lý Video ---
+                    // --- Xử lý Video (Nền động) ---
                     bgVideoElement.src = URL.createObjectURL(file);
-                    
-                    // Chờ video tải metadata để lấy kích thước
                     await new Promise(resolve => bgVideoElement.onloadedmetadata = resolve); 
                     
                     resizeCanvas(bgVideoElement.videoWidth, bgVideoElement.videoHeight);
                     
-                    // Bắt đầu chơi video (play() phải nằm trong 1 tương tác người dùng - ở đây là click upload)
                     await bgVideoElement.play().catch(e => {
                         console.error("Lỗi Playback Video (thường do không được phép tự động phát):", e);
-                        ui.msg.textContent = "⚠️ Tải video thành công nhưng cần bấm nút ▶ BẮT ĐẦU MÔ PHỎNG để video chạy.";
                     }); 
                     
                     state.bgType = 'video';
-                    state.bgImage = null; // Clear ảnh tĩnh
+                    state.bgImage = null; 
                     state.time = 0;
                     
-                    ui.msg.textContent = `✅ Đã tải Video (${bgVideoElement.videoWidth}x${bgVideoElement.videoHeight}). Bắt đầu vẽ đường dẫn!`;
+                    ui.msg.textContent = `✅ Đã tải Video. Bấm ▶ BẮT ĐẦU MÔ PHỎNG để chạy nền động!`;
                     
                 } else if (file.type.startsWith('image/')) {
-                    // --- Xử lý Ảnh Tĩnh ---
+                    // --- Xử lý Ảnh Tĩnh (Bao gồm cả GIF) ---
                     bgVideoElement.pause();
                     bgVideoElement.src = ""; // Clear video source
                     
@@ -204,16 +200,22 @@
                     resizeCanvas(img.naturalWidth, img.naturalHeight);
                     state.bgType = 'image';
                     
-                    ui.msg.textContent = "✅ Đã tải ảnh nền tĩnh. Sẵn sàng vẽ.";
+                    if (file.type === 'image/gif') {
+                        ui.msg.textContent = "⚠️ Đã tải GIF. Do vấn đề tương thích, GIF sẽ được hiển thị như Ảnh Tĩnh.";
+                    } else {
+                        ui.msg.textContent = "✅ Đã tải ảnh nền tĩnh. Sẵn sàng vẽ.";
+                    }
                 } else {
                     throw new Error("Định dạng file không hỗ trợ.");
                 }
 
                 enableTools(true);
-                // Đảm bảo loop chạy cho video
-                if (state.bgType === 'video' && !state.isSimulating) {
-                     state.isSimulating = true;
-                     ui.btnSim.textContent = "⏸ TẠM DỪNG";
+                // Bắt đầu loop ngay nếu là video, hoặc nếu đang mô phỏng.
+                if (state.bgType === 'video' || state.isSimulating) {
+                     if (!state.isSimulating) {
+                        state.isSimulating = true;
+                        ui.btnSim.textContent = "⏸ TẠM DỪNG";
+                     }
                      loop();
                 } else {
                     drawMain();
@@ -221,13 +223,14 @@
 
             } catch (err) {
                 console.error(err);
-                alert("Không thể đọc file này. Vui lòng thử file MP4/WebM hoặc ảnh JPG/PNG khác.");
-                ui.msg.textContent = "❌ Lỗi đọc file.";
+                alert("Không thể đọc file này. Vui lòng thử file MP4/WebM hoặc ảnh JPG/PNG/GIF khác.");
+                ui.msg.textContent = "❌ Lỗi đọc file. Vui lòng kiểm tra định dạng.";
             } finally {
                 ui.loader.classList.add('hidden');
             }
         });
 
+        // Tải vật liệu (Giữ nguyên)
         document.getElementById('materialImageUpload').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) {
@@ -239,7 +242,7 @@
             }
         });
 
-        // --- 3. LOGIC HỆ THỐNG & VẼ ---
+        // --- 3. LOGIC HỆ THỐNG & VẼ --- (Giữ nguyên)
 
         function resizeCanvas(w, h) {
             const parent = canvas.parentElement;
@@ -282,7 +285,16 @@
                 : "🖌️ Vẽ Vùng: Vẽ vòng tròn khép kín để chứa hạt.";
         }
 
-        // --- Sự kiện chuột vẽ --- (Giữ nguyên logic vẽ path)
+        const getPos = (e) => {
+            const r = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / r.width;
+            const scaleY = canvas.height / r.height;
+            return {
+                x: (e.clientX - r.left) * scaleX,
+                y: (e.clientY - r.top) * scaleY
+            };
+        };
+        
         canvas.addEventListener('mousedown', e => {
             if(state.mode === 'idle') return;
             state.isDrawing = true;
@@ -335,17 +347,6 @@
             drawMain();
         });
 
-        const getPos = (e) => {
-            const r = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / r.width;
-            const scaleY = canvas.height / r.height;
-            return {
-                x: (e.clientX - r.left) * scaleX,
-                y: (e.clientY - r.top) * scaleY
-            };
-        };
-
-        // --- Logic tính toán đường đi --- (Giữ nguyên)
         function initLinePath(path) {
             let total = 0;
             path.dists = [0];
@@ -404,7 +405,8 @@
             state.particles.push(p);
         }
 
-        // --- UPDATE & DRAW ---
+        // --- UPDATE, DRAW và EXPORT --- (Giữ nguyên logic mô phỏng và xuất GIF)
+
         ui.btnSim.addEventListener('click', () => {
             state.isSimulating = !state.isSimulating;
             ui.btnSim.textContent = state.isSimulating ? "⏸ TẠM DỪNG" : "▶ TIẾP TỤC";
@@ -447,7 +449,6 @@
                     
                     if(p.x < path.bounds.minX || p.x > path.bounds.maxX || 
                        p.y < path.bounds.minY || p.y > path.bounds.maxY) {
-                        // Respawn
                         p.x = path.bounds.minX + Math.random()*path.bounds.w;
                         p.y = path.bounds.minY + Math.random()*path.bounds.h;
                     }
@@ -459,7 +460,7 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             // 1. Vẽ Nền
-            if (state.bgType === 'video' && bgVideoElement.readyState > 1) { // readyState > 1 (HAVE_METADATA)
+            if (state.bgType === 'video' && bgVideoElement.readyState > 1) { 
                 ctx.drawImage(bgVideoElement, 0, 0, canvas.width, canvas.height);
             } 
             else if (state.bgType === 'image' && state.bgImage) {
@@ -524,7 +525,6 @@
             });
         }
 
-        // --- EXPORT GIF (HỖ TRỢ VIDEO FRAME CAPTURE) ---
         ui.btnExport.addEventListener('click', async () => {
             if (state.bgType === 'none' || state.paths.length === 0) {
                  alert("Vui lòng tải lên video/ảnh và vẽ đường dẫn mô phỏng trước khi xuất file.");
@@ -534,7 +534,7 @@
             const isVideoExport = state.bgType === 'video';
             const gif = new GIF({
                 workers: 2,
-                quality: isVideoExport ? 5 : 10, // Giảm quality khi export video để tiết kiệm bộ nhớ
+                quality: isVideoExport ? 5 : 10,
                 width: canvas.width,
                 height: canvas.height,
                 workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/gif.worker.js' 
@@ -545,12 +545,12 @@
             
             const fps = 20;
             const dt = 1000 / fps;
-            const totalSeconds = 3; // Xuất 3 giây
+            const totalSeconds = isVideoExport ? 3 : 2; // Xuất 3s cho video, 2s cho ảnh tĩnh
             const totalFrames = totalSeconds * fps;
             
-            // Backup time và pause video nếu cần
             const realTime = state.time;
             let wasPlaying = false;
+            
             if(isVideoExport) {
                 wasPlaying = !bgVideoElement.paused;
                 bgVideoElement.pause();
@@ -558,43 +558,32 @@
 
             for(let i=0; i<totalFrames; i++) {
                 
-                // 1. Cập nhật thời gian và vị trí frame video
                 if (isVideoExport) {
-                    const targetTime = (i * dt) / 1000; // time in seconds
+                    const targetTime = (i * dt) / 1000;
                     // Đảm bảo thời gian lặp lại trong video duration
                     bgVideoElement.currentTime = targetTime % bgVideoElement.duration; 
                     
-                    // Chờ frame video được cập nhật trước khi vẽ (sử dụng onseeked)
                     await new Promise(resolve => {
                         bgVideoElement.onseeked = resolve;
-                        // Trường hợp onseeked không chạy, dùng fallback
                         setTimeout(resolve, 30); 
                     });
                 }
                 
-                // 2. Cập nhật vị trí hạt
                 state.time += dt;
                 update(dt); 
-                
-                // 3. Vẽ lên canvas
                 drawMain(); 
-                
-                // 4. Thêm frame vào GIF
                 gif.addFrame(ctx, {copy: true, delay: dt});
                 
                 ui.loaderText.textContent = `Rendering ${(i/totalFrames*100)|0}%`;
                 await new Promise(r => setTimeout(r, 0));
             }
 
-            // Restore trạng thái
             state.time = realTime;
-            if(isVideoExport && wasPlaying) {
-                bgVideoElement.play();
-            } else if (isVideoExport) {
-                // Đảm bảo video đang ở thời điểm đúng sau khi xuất
+            
+            if(isVideoExport) {
+                if(wasPlaying) bgVideoElement.play();
                 bgVideoElement.currentTime = realTime / 1000 % bgVideoElement.duration;
             }
-            // Khởi chạy lại loop nếu nó bị tắt
             if (state.isSimulating) loop();
 
 
