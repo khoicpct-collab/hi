@@ -320,6 +320,7 @@
             showLoader("Đang lấy kích thước Slide...");
             
             try {
+                // Sử dụng Office.js để truy cập PowerPoint
                 await PowerPoint.run(async (context) => {
                     // Lấy slide đầu tiên
                     const slide = context.presentation.slides.getItemAt(0);
@@ -355,7 +356,8 @@
                 await new Promise(resolve => img.onload = resolve);
                 state.materialImage = await createImageBitmap(img);
                 
-                state.simParams.particleSize = Math.max(5, Math.min(15, img.naturalWidth / 5)); // Đặt kích thước hạt theo ảnh
+                // Đặt kích thước hạt theo ảnh (ví dụ)
+                state.simParams.particleSize = Math.max(5, Math.min(15, img.naturalWidth / 5)); 
                 
                 ui.msg.textContent = `✅ Đã tải ảnh vật liệu (${file.name}). Sẵn sàng vẽ Path.`;
                 hideLoader();
@@ -628,16 +630,24 @@
                         particle.y += path.flowVector.vy * dtSeconds;
 
                         // Giữ tuổi thọ để tạo hiệu ứng tuần hoàn
-                        particle.life = Math.min(particle.life + dt, state.simParams.particleLifetime);
+                        // Nếu hạt vẫn trong vùng, nó có thể "hồi phục" tuổi thọ
+                        particle.life = Math.min(particle.life + dt * 0.1, state.simParams.particleLifetime);
                     } else {
-                        // Hạt trôi ra ngoài vùng, giảm tốc
-                        particle.vx *= 0.95; 
-                        particle.vy *= 0.95;
+                        // Hạt trôi ra ngoài vùng, giảm tốc và mất tuổi thọ nhanh hơn
+                        particle.vx *= 0.99; // Giảm tốc nhẹ
+                        particle.vy *= 0.99;
                         
                         particle.x += particle.vx * dtSeconds;
                         particle.y += particle.vy * dtSeconds;
                     }
                 }
+                
+                // Kiểm tra giới hạn màn hình (áp dụng cho Vector)
+                if (particle.pathType === 'vector' && 
+                    (particle.x < 0 || particle.x > canvas.width || particle.y < 0 || particle.y > canvas.height)) {
+                    return false; // Hạt trôi ra khỏi màn hình
+                }
+                
                 return true;
             });
             
@@ -727,8 +737,10 @@
                 ctx.globalAlpha = p.life / state.simParams.particleLifetime;
                 
                 if (state.materialImage) {
+                    // Vẽ ảnh vật liệu
                     ctx.drawImage(state.materialImage, p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
                 } else {
+                    // Vẽ hình tròn mặc định nếu không có ảnh vật liệu
                     ctx.fillStyle = '#4CAF50';
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2);
@@ -756,8 +768,8 @@
             const wasSimulating = state.isSimulating;
             state.isSimulating = false; // Tạm dừng vòng lặp requestAnimationFrame
             
-            const frameCount = 60; // Số lượng frame xuất
-            const durationPerFrame = 50; // ms (20 FPS)
+            const frameCount = 60; // Số lượng frame xuất (tương đương 3 giây ở 20 FPS)
+            const durationPerFrame = 50; // ms (20 FPS = 1000ms / 50ms)
             
             try {
                 
@@ -789,7 +801,7 @@
                         await context.sync(); 
                     }
                     
-                    // Thêm hướng dẫn vào slide cuối cùng
+                    // Thêm hướng dẫn vào slide cuối cùng (Chỉ để hướng dẫn người dùng)
                     const lastSlide = context.presentation.slides.getLast();
                     lastSlide.shapes.addTextBox("Sau khi xuất xong, dùng chức năng 'File -> Export -> Create a Video' của PowerPoint để tạo file động (MP4/GIF).", { 
                         left: 50, 
@@ -820,6 +832,7 @@
         ui.btnReset.addEventListener('click', () => {
             state.paths = [];
             state.particles = [];
+            // Nếu có canvas ẩn (mask) thì cũng xóa
             if (maskCanvas.width > 0) {
                  maskCtx.clearRect(0,0,maskCanvas.width, maskCanvas.height);
             }
