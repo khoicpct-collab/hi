@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Manifest file cho Office Add-in. Tất cả URLs đã được cập nhật đến GitHub Pages. -->
+<OfficeApp 
+          xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+          xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" 
+          xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+          xsi:schemaLocation="http://schemas.microsoft.com/office/appforoffice/1.1 https://appsforoffice.microsoft.com/schemas/appforoffice/1.1/appforoffice.xsd"
+          RequiredProduct="PowerPoint"
+          Version="1.0.0.0">
+
+  <!-- ✅ ĐÃ THAY THẾ: Mã GUID duy nhất của bạn -->
+  <Id>98816BBE-36C3-4D18-9CC8-4595D28E5EEA</Id> 
+  <Version>1.0.0.0</Version>
+  <ProviderName>Simulation Tool Developer</ProviderName>
+  <DefaultLocale>vi-VN</DefaultLocale>
+  <DisplayName DefaultValue="Công cụ Mô phỏng Dòng chảy (Flow Sim)"/>
+  <Description DefaultValue="Tạo hiệu ứng mô phỏng chuyển động hạt và dòng chảy trên PowerPoint."/>
+
+  <Hosts>
+    <Host Name="Presentation"/>
+  </Hosts>
+
+  <DefaultSettings>
+    <!-- URL ĐÍCH: https://khoicpct-collab.github.io/hi/taskpane.html -->
+    <SourceLocation DefaultValue="https://khoicpct-collab.github.io/hi/taskpane.html"/> 
+  </DefaultSettings>
+
+  <Permissions>ReadWriteDocument</Permissions>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Presentation">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="FlowSimGroup">
+                <Label DefaultValue="Mô phỏng"/>
+                <Control xsi:type="Button" id="FlowSimButton">
+                  <Label DefaultValue="Flow Sim Tool"/>
+                  <Supertip>
+                    <Title DefaultValue="Mở công cụ mô phỏng"/>
+                    <Description DefaultValue="Mở bảng điều khiển để thiết lập Path và chạy mô phỏng."/>
+                  </Supertip>
+                  <Icon>
+                    <!-- Icon URLS đã cập nhật đến: https://khoicpct-collab.github.io/hi/assets/ -->
+                    <bt:Image size="16" DefaultValue="https://khoicpct-collab.github.io/hi/assets/icon-16.png"/>
+                    <bt:Image size="32" DefaultValue="https://khoicpct-collab.github.io/hi/assets/icon-32.png"/>
+                    <bt:Image size="80" DefaultValue="https://khoicpct-collab.github.io/hi/assets/icon-80.png"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>FlowSimTaskPane</TaskpaneId>
+                    <SourceLocation DefaultValue="https://khoicpct-collab.github.io/hi/taskpane.html"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Urls>
+        <bt:Url id="TaskpaneUrl" DefaultValue="https://khoicpct-collab.github.io/hi/taskpane.html"/>
+      </bt:Urls>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>
