@@ -713,7 +713,6 @@
         let displacementMap = null; // Biến mới cho Displacement Map
         let textures = [];
         let zoomLevel = 1;
-        let isPanning = false; // Biến mới cho Pan
         
         let warpSettings = {
             dispIntensity: 0, // Control mới
@@ -765,8 +764,9 @@
         canvas.on('object:removed', saveToHistory);
 
 
-        // ========== NÂNG CẤP: ZOOM & PAN (Khắc phục lỗi mất hình) ==========
-        
+        // ========== NÂNG CẤP: ZOOM & PAN (Khắc phục lỗi mất hình Lần 2) ==========
+        let isPanning = false;
+
         // Bắt sự kiện khi nhấn và nhả chuột trên Canvas (Kích hoạt Pan)
         canvas.on('mouse:down', function(opt) {
             const evt = opt.e;
@@ -786,10 +786,14 @@
                 
                 vpt[4] += evt.clientX - canvas.lastPosX;
                 vpt[5] += evt.clientY - canvas.lastPosY;
+                
+                // Thêm giới hạn Pan để ngăn canvas trôi vô hạn (Nguyên nhân mất hình)
+                limitPan(vpt); 
+
                 canvas.requestRenderAll();
                 
                 canvas.lastPosX = evt.clientX;
-                canvas.lastPosY = evt.clientY;
+                canvas.lastPosY = evt.lastPosY = evt.clientY;
             }
         });
 
@@ -797,7 +801,32 @@
             // Tắt Pan và Bật lại chọn đối tượng
             isPanning = false;
             canvas.selection = true; 
+            canvas.setViewportTransform(canvas.viewportTransform); // Đảm bảo VPT được lưu
         });
+        
+        // HÀM MỚI: Giới hạn Pan Viewport Transform
+        function limitPan(vpt) {
+            const viewportWidth = canvas.getWidth();
+            const viewportHeight = canvas.getHeight();
+            // Điều chỉnh biên độ giới hạn (chỉ cho phép dịch chuyển trong phạm vi gần canvas)
+            const maxOffsetX = viewportWidth * (zoomLevel - 1) * 0.5;
+            const maxOffsetY = viewportHeight * (zoomLevel - 1) * 0.5;
+
+            // Giới hạn dịch chuyển X
+            if (vpt[4] > maxOffsetX) {
+                vpt[4] = maxOffsetX;
+            } else if (vpt[4] < -maxOffsetX) {
+                vpt[4] = -maxOffsetX;
+            }
+
+            // Giới hạn dịch chuyển Y
+            if (vpt[5] > maxOffsetY) {
+                vpt[5] = maxOffsetY;
+            } else if (vpt[5] < -maxOffsetY) {
+                vpt[5] = -maxOffsetY;
+            }
+        }
+
 
         // Bắt sự kiện Scroll Wheel (Zoom theo con trỏ chuột)
         canvas.on('mouse:wheel', function(opt) {
@@ -816,6 +845,10 @@
             // Zoom tại vị trí con trỏ chuột
             canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, newZoom);
             zoomLevel = newZoom;
+            
+            // Sau khi zoom, điều chỉnh lại VPT để đảm bảo không bị trôi
+            limitPan(canvas.viewportTransform);
+
             updateZoomDisplay();
             opt.e.preventDefault(); 
             opt.e.stopPropagation();
@@ -837,7 +870,9 @@
         function resetZoom() { 
             // Reset Viewport Transform
             canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-            zoomToPoint(canvas.getCenter(), 1); 
+            zoomLevel = 1;
+            canvas.setZoom(1);
+            updateZoomDisplay();
             updateStatus("Zoom đã reset về 100%"); 
         }
 
@@ -847,7 +882,7 @@
         document.getElementById('zoomResetCanvas').addEventListener('click', resetZoom);
 
 
-        // ========== UPLOAD FUNCTIONS ==========
+        // ========== UPLOAD FUNCTIONS (Giữ nguyên) ==========
 
         // 1. UPLOAD MOCKUP
         document.getElementById('uploadMockupBtn').addEventListener('click', () => document.getElementById('mockupFile').click());
@@ -1274,31 +1309,35 @@
             const originalZoom = zoomLevel;
             
             // 2. Tạm thời reset zoom/pan để Canvas.toDataURL chụp toàn bộ
-            canvas.setZoom(1);
-            canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-            
-            // 3. Ẩn Controls và bỏ chọn đối tượng
             canvas.discardActiveObject(); 
+            
+            // Tắt controls/borders
             canvas.getObjects().forEach(obj => {
                 obj.hasControls = false;
                 obj.hasBorders = false;
             });
+            
+            // Thực hiện Reset
+            canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+            canvas.setZoom(1);
             canvas.renderAll();
 
-            // 4. Chuyển Canvas sang Data URL (Chụp ảnh)
+            // 3. Chuyển Canvas sang Data URL (Chụp ảnh)
             const dataURL = canvas.toDataURL({
                 format: format,
                 quality: 0.95
             });
 
-            // 5. Khôi phục trạng thái Canvas (Asynchronous - dùng setTimeout để đảm bảo)
+            // 4. Khôi phục trạng thái Canvas và Controls
+            // Sử dụng setTimeout 50ms để đảm bảo DataURL đã được tạo trước khi restore
             setTimeout(() => {
+                // Khôi phục Viewport và Zoom
                 canvas.setViewportTransform(originalVpt);
                 canvas.setZoom(originalZoom);
                 zoomLevel = originalZoom;
                 updateZoomDisplay();
                 
-                // Khôi phục Controls cho các đối tượng có thể chọn
+                // Khôi phục Controls
                 canvas.getObjects().forEach(obj => {
                     if (obj.name === 'texture') {
                         obj.hasControls = true;
@@ -1307,7 +1346,7 @@
                 });
                 canvas.renderAll();
                 
-                // 6. Tải file xuống
+                // 5. Tải file xuống
                 const link = document.createElement('a');
                 link.href = dataURL;
                 link.download = `${fileName}.${format}`;
@@ -1320,6 +1359,7 @@
 
             }, 50); 
         });
+
 
         // ========== CÁC CÔNG CỤ KHÁC (Giữ nguyên) ==========
         
@@ -1402,6 +1442,11 @@
             if (e.ctrlKey && e.key === 'z') { e.preventDefault(); document.getElementById('undoBtn').click(); }
             if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'Z')) { e.preventDefault(); document.getElementById('redoBtn').click(); }
             if (e.ctrlKey && e.key === 'w') { e.preventDefault(); document.getElementById('warpSurfaceBtn').click(); }
+            // Phím Delete/Backspace để xóa
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                 e.preventDefault(); 
+                 document.getElementById('removeBtn').click(); 
+            }
         });
 
         canvas.on('selection:created', updateSelectedObject);
@@ -1419,6 +1464,10 @@
                 selectedObjElement.textContent = 'Không có';
                 selectedObjElement.style.color = '#ff6b6b';
             }
+        }
+        
+        function updateStatus(message) {
+             document.getElementById('statusText').textContent = message;
         }
 
         // ========== KHỞI TẠO ==========
