@@ -166,6 +166,13 @@
             background-color: #4ecdc4;
             color: #2c3e50;
         }
+        
+        /* NEW: Class cho công cụ đang được chọn */
+        .tool-btn.active-tool {
+            background-color: #4ecdc4;
+            color: #2c3e50;
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.8);
+        }
 
         .canvas-area {
             flex: 1;
@@ -452,10 +459,16 @@
             <div class="section">
                 <h3 class="section-title"><i class="fas fa-tools"></i> 4. Công Cụ Chỉnh Sửa</h3>
                 <div class="tools">
-                    <button class="tool-btn" id="transformBtn" title="Ctrl+T">
-                        <i class="fas fa-expand-alt"></i>
-                        <span>Transform</span>
+                    <button class="tool-btn active-tool" id="transformBtn" title="Chọn & Chỉnh sửa (Ctrl+T / Esc)">
+                        <i class="fas fa-mouse-pointer"></i>
+                        <span>Select</span>
                     </button>
+                    
+                    <button class="tool-btn" id="handToolBtn" title="Kéo Canvas (H)">
+                        <i class="fas fa-hand-paper"></i>
+                        <span>Bàn Tay</span>
+                    </button> 
+                    
                     <button class="tool-btn" id="fitSurfaceBtn">
                         <i class="fas fa-crop-alt"></i>
                         <span>Fit Bề Mặt</span>
@@ -540,11 +553,11 @@
             <div class="canvas-info">
                 <div class="canvas-info-item">
                     <i class="fas fa-mouse-pointer"></i>
-                    <span>Kéo thả ảnh từ sidebar</span>
+                    <span>Sử dụng **Escape** để chuyển về công cụ **Select**</span>
                 </div>
                 <div class="canvas-info-item">
                     <i class="fas fa-arrows-alt"></i>
-                    <span>Giữ **Ctrl** + Kéo chuột để **Pan** (Di chuyển canvas khi zoom)</span>
+                    <span>Giữ **Ctrl/Alt** hoặc dùng phím **H** để **Pan** (Di chuyển canvas)</span>
                 </div>
                 <div class="canvas-info-item">
                     <i class="fas fa-search"></i>
@@ -710,12 +723,13 @@
 
         // ========== BIẾN TOÀN CỤC ==========
         let mockupImage = null;
-        let displacementMap = null; // Biến mới cho Displacement Map
+        let displacementMap = null; 
         let textures = [];
         let zoomLevel = 1;
+        let currentToolMode = 'select'; // NEW: Default mode is select (Chọn/Transform)
         
         let warpSettings = {
-            dispIntensity: 0, // Control mới
+            dispIntensity: 0, 
             warpX: 0,
             warpY: 0,
             bulge: 0,
@@ -764,30 +778,62 @@
         canvas.on('object:removed', saveToHistory);
 
 
+        // ========== CHUYỂN ĐỔI CÔNG CỤ (SELECT/HAND) ==========
+        function setToolMode(mode) {
+            currentToolMode = mode;
+            
+            // Xóa trạng thái active của tất cả các nút công cụ
+            document.querySelectorAll('.tools .tool-btn').forEach(btn => {
+                btn.classList.remove('active-tool');
+            });
+
+            if (mode === 'hand') {
+                document.getElementById('handToolBtn').classList.add('active-tool');
+                canvas.selection = false; // Tắt chọn đối tượng
+                canvas.defaultCursor = 'grab';
+                canvas.hoverCursor = 'grab';
+                updateStatus('Chế độ Bàn Tay (Pan) được kích hoạt');
+            } else { // mode === 'select'
+                document.getElementById('transformBtn').classList.add('active-tool');
+                canvas.selection = true; // Bật lại chọn đối tượng
+                canvas.defaultCursor = 'default';
+                canvas.hoverCursor = 'move';
+                updateStatus('Chế độ Select/Transform được kích hoạt');
+            }
+            canvas.renderAll();
+        }
+
+        document.getElementById('handToolBtn').addEventListener('click', () => setToolMode('hand'));
+        document.getElementById('transformBtn').addEventListener('click', () => setToolMode('select'));
+
+
         // ========== NÂNG CẤP: ZOOM & PAN (Khắc phục lỗi mất hình Lần 2) ==========
         let isPanning = false;
 
         // Bắt sự kiện khi nhấn và nhả chuột trên Canvas (Kích hoạt Pan)
         canvas.on('mouse:down', function(opt) {
             const evt = opt.e;
-            // Kích hoạt Pan khi nhấn Ctrl hoặc Alt
-            if (evt.ctrlKey || evt.altKey) { 
+            // Kích hoạt Pan khi nhấn Ctrl/Alt HOẶC khi đang ở chế độ Hand
+            if (evt.ctrlKey || evt.altKey || currentToolMode === 'hand') { 
                 isPanning = true;
-                canvas.selection = false; // Tắt chọn đối tượng
+                canvas.selection = false; 
                 canvas.lastPosX = evt.clientX;
                 canvas.lastPosY = evt.clientY;
+                if (currentToolMode === 'hand') {
+                    canvas.defaultCursor = 'grabbing'; // Thay đổi con trỏ
+                }
             }
         });
 
         canvas.on('mouse:move', function(opt) {
-            if (isPanning && zoomLevel > 1) { // Chỉ Pan khi đã zoom
+            if (isPanning && zoomLevel >= 1) { // Chỉ Pan khi đã zoom (>= 100%)
                 const evt = opt.e;
                 const vpt = canvas.viewportTransform;
                 
                 vpt[4] += evt.clientX - canvas.lastPosX;
                 vpt[5] += evt.clientY - canvas.lastPosY;
                 
-                // Thêm giới hạn Pan để ngăn canvas trôi vô hạn (Nguyên nhân mất hình)
+                // Giới hạn Pan để không bị trôi vô hạn
                 limitPan(vpt); 
 
                 canvas.requestRenderAll();
@@ -798,17 +844,22 @@
         });
 
         canvas.on('mouse:up', function(opt) {
-            // Tắt Pan và Bật lại chọn đối tượng
             isPanning = false;
-            canvas.selection = true; 
-            canvas.setViewportTransform(canvas.viewportTransform); // Đảm bảo VPT được lưu
+            if (currentToolMode === 'select') {
+                canvas.selection = true;
+                canvas.defaultCursor = 'default';
+            } else if (currentToolMode === 'hand') {
+                 canvas.defaultCursor = 'grab'; // Trở lại bàn tay chưa nắm
+                 canvas.selection = false; 
+            }
+            canvas.setViewportTransform(canvas.viewportTransform); 
         });
-        
+
         // HÀM MỚI: Giới hạn Pan Viewport Transform
         function limitPan(vpt) {
             const viewportWidth = canvas.getWidth();
             const viewportHeight = canvas.getHeight();
-            // Điều chỉnh biên độ giới hạn (chỉ cho phép dịch chuyển trong phạm vi gần canvas)
+            // Điều chỉnh biên độ giới hạn
             const maxOffsetX = viewportWidth * (zoomLevel - 1) * 0.5;
             const maxOffsetY = viewportHeight * (zoomLevel - 1) * 0.5;
 
@@ -1011,7 +1062,6 @@
         
         // ========== 4. FIT THEO BỀ MẶT NÂNG CAO ==========
         document.getElementById('fitSurfaceBtn').addEventListener('click', function() {
-            // (Giữ logic cũ)
             const activeObj = canvas.getActiveObject();
             if (!activeObj || !mockupImage) {
                 updateStatus('Cần có mockup và vật liệu để fit bề mặt');
@@ -1420,28 +1470,25 @@
             }
         });
 
-         document.getElementById('transformBtn').addEventListener('click', function() {
-            const activeObj = canvas.getActiveObject();
-            if (activeObj) {
-                activeObj.set({
-                    hasControls: !activeObj.hasControls,
-                    hasBorders: !activeObj.hasBorders
-                });
-                canvas.renderAll();
-                updateStatus('Chế độ Transform: ' + (activeObj.hasControls ? 'Bật' : 'Tắt'));
-                if (!activeObj.hasControls) saveToHistory();
-            } else {
-                updateStatus('Vui lòng chọn một đối tượng để transform');
-            }
-        });
+        // Thay đổi logic Transform/Select để dùng setToolMode
+        document.getElementById('transformBtn').addEventListener('click', () => setToolMode('select'));
 
 
         // ========== PHÍM TẮT & THEO DÕI ĐỐI TƯỢNG ==========
         document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 't') { e.preventDefault(); document.getElementById('transformBtn').click(); }
+            // Phím tắt H: Bàn Tay
+            if (e.key.toLowerCase() === 'h' && currentToolMode !== 'hand') { 
+                e.preventDefault(); 
+                setToolMode('hand');
+            } 
+            // Phím tắt Esc/Ctrl+T: Select/Transform
+            else if (e.key === 'Escape' || (e.ctrlKey && e.key === 't')) { 
+                e.preventDefault(); 
+                setToolMode('select');
+            }
+            
             if (e.ctrlKey && e.key === 'z') { e.preventDefault(); document.getElementById('undoBtn').click(); }
             if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'Z')) { e.preventDefault(); document.getElementById('redoBtn').click(); }
-            if (e.ctrlKey && e.key === 'w') { e.preventDefault(); document.getElementById('warpSurfaceBtn').click(); }
             // Phím Delete/Backspace để xóa
             if (e.key === 'Delete' || e.key === 'Backspace') {
                  e.preventDefault(); 
@@ -1471,6 +1518,7 @@
         }
 
         // ========== KHỞI TẠO ==========
+        setToolMode('select'); // Đảm bảo chế độ Select là mặc định
         updateZoomDisplay();
         updateStatus('Sẵn sàng - Tải mockup và ảnh vật liệu để bắt đầu');
         updateSelectedObject();
