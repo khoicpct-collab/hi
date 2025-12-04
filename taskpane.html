@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Simulation Tool</title>
+    <!-- Tải Office.js API để giao tiếp với PowerPoint -->
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #f4f7f9;
+            color: #333;
+            overflow-x: hidden;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        h2 {
+            font-size: 1.25rem;
+            color: #1a73e8;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+        .section {
+            background-color: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .controls, .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        button, input[type="file"] {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        button:hover:not([disabled]) {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        button:disabled {
+            background-color: #a0c3e8;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .btn-primary {
+            background-color: #1a73e8;
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        
+        .file-upload-label {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            text-align: center;
+        }
+
+        .file-upload-label:hover {
+            background-color: #45a049;
+        }
+        
+        #materialImageUpload {
+            display: none;
+        }
+        
+        #mainCanvas {
+            border: 2px dashed #ccc;
+            border-radius: 6px;
+            margin-top: 15px;
+            width: 100%; /* Đảm bảo canvas chiếm hết chiều rộng */
+            height: auto;
+            cursor: default;
+        }
+        
+        .drawing-mode {
+            cursor: crosshair !important;
+        }
+        
+        #msgStatus {
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #e3f2fd;
+            color: #1a73e8;
+            font-size: 0.875rem;
+            text-align: center;
+        }
+
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            border-radius: 8px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #1a73e8;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div id="loader" class="hidden">
+        <div class="spinner"></div>
+        <div id="loaderText">Đang xử lý...</div>
+    </div>
+
+    <div class="container">
+        <div id="msgStatus">Vui lòng khởi động Add-in trong PowerPoint.</div>
+
+        <div class="section">
+            <h2>1. Thiết lập Nền (Slide)</h2>
+            <button id="btnSetContext" class="btn-primary">
+                📏 Kích hoạt Canvas theo Slide
+            </button>
+            <p style="font-size: 0.8rem; margin-top: 5px;">
+                *Đảm bảo bạn đã chèn GIF/Video vào Slide.
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>2. Vật liệu Mô phỏng</h2>
+            <input type="file" id="materialImageUpload" accept="image/png, image/jpeg">
+            <label for="materialImageUpload" class="file-upload-label">
+                📤 Tải Ảnh Hạt (Vật liệu)
+            </label>
+        </div>
+        
+        <div class="section">
+            <h2>3. Định nghĩa Vùng Chuyển động</h2>
+            <div class="controls">
+                <button id="btnLine" class="btn-secondary" disabled>
+                    ✏️ Vẽ Đường dẫn (Line)
+                </button>
+                <button id="btnVector" class="btn-secondary" disabled>
+                    🖌️ Vẽ Vùng Dòng chảy (Vector)
+                </button>
+                <button id="btnReset" class="btn-secondary" disabled>
+                    🗑 Xóa Path & Hạt
+                </button>
+            </div>
+        </div>
+
+        <canvas id="mainCanvas" width="800" height="600"></canvas>
+
+        <div class="section">
+            <h2>4. Mô phỏng & Xuất file</h2>
+            <div class="actions">
+                <button id="btnSimulate" class="btn-primary" disabled>
+                    ▶ BẮT ĐẦU MÔ PHỎNG
+                </button>
+                <button id="btnExport" class="btn-primary" disabled>
+                    💾 XUẤT FRAME VÀO SLIDE
+                </button>
+            </div>
+            <p style="font-size: 0.8rem; margin-top: 5px; color: #cc0000;">
+                *Sau khi xuất, sử dụng "File -> Export -> Create a Video" của PowerPoint.
+            </p>
+        </div>
+
+    </div>
+
+    <script>
+        // Khởi tạo Office.js
+        Office.onReady((info) => {
+            if (info.host === Office.HostType.PowerPoint) {
+                document.getElementById('msgStatus').textContent = "✅ Đã kết nối với PowerPoint. Sẵn sàng!";
+            }
+        });
+        
+        // --- 1. CẤU HÌNH & STATE BAN ĐẦU ---
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        // Canvas ẩn để tạo mask (giữ lại từ code cũ)
+        const maskCanvas = document.createElement('canvas');
+        const maskCtx = maskCanvas.getContext('2d');
+
+        let state = {
+            isSimulating: false,
+            mode: 'idle', // idle, line, vector
+            isDrawing: false,
+            
+            slideWidth: 800, // Sẽ được cập nhật
+            slideHeight: 600, // Sẽ được cập nhật
+            
+            materialImage: null,
+            paths: [],
+            particles: [],
+            
+            time: 0,
+            lastFrameTime: 0,
+            
+            simParams: {
+                maxParticles: 500,
+                spawnRate: 15, // hạt/giây
+                particleSize: 5,
+                particleLifetime: 3000, // ms
+                lineSpeed: 120, // px/s
+                vectorFlowSpeed: 80, // px/s
+            }
+        };
+
+        let currentPath = null;
+        let animFrameId = null;
+
+        const ui = {
+            loader: document.getElementById('loader'),
+            loaderText: document.getElementById('loaderText'),
+            msg: document.getElementById('msgStatus'),
+            btnSetContext: document.getElementById('btnSetContext'),
+            btnLine: document.getElementById('btnLine'),
+            btnVector: document.getElementById('btnVector'),
+            btnSim: document.getElementById('btnSimulate'),
+            btnExport: document.getElementById('btnExport'),
+            btnReset: document.getElementById('btnReset'),
+        };
+
+        // --- 2. HÀM HỖ TRỢ VÀ UI ---
+        
+        function showLoader(text) {
+            ui.loaderText.textContent = text;
+            ui.loader.classList.remove('hidden');
+        }
+
+        function hideLoader() {
+            ui.loader.classList.add('hidden');
+        }
+
+        function enableTools(enable) {
+            ui.btnLine.disabled = !enable;
+            ui.btnVector.disabled = !enable;
+            ui.btnSim.disabled = !enable;
+            ui.btnExport.disabled = !enable;
+            ui.btnReset.disabled = !enable;
+        }
+
+        function resizeCanvas(w, h) {
+            state.slideWidth = w;
+            state.slideHeight = h;
+            
+            canvas.width = w;
+            canvas.height = h;
+            maskCanvas.width = w;
+            maskCanvas.height = h;
+
+            // Đặt Canvas để vừa với Task Pane (Tỷ lệ cố định)
+            const parentWidth = canvas.parentElement.clientWidth;
+            const aspectRatio = w / h;
+            
+            canvas.style.width = parentWidth + 'px';
+            canvas.style.height = (parentWidth / aspectRatio) + 'px';
+            
+            drawMain();
+        }
+
+        function setMode(m) {
+            state.mode = m;
+            canvas.classList.toggle('drawing-mode', m !== 'idle');
+            ui.msg.textContent = m === 'line' 
+                ? "✏️ Vẽ Line: Kéo chuột tạo đường dẫn." 
+                : "🖌️ Vẽ Vùng: Vẽ vòng tròn khép kín. Nhấn nút chuột lên để kết thúc.";
+        }
+
+        // --- 3. GIAO TIẾP VỚI POWERPOINT (OFFICE.JS) ---
+        
+        ui.btnSetContext.addEventListener('click', setSlideContext);
+        
+        async function setSlideContext() {
+            if (!Office.context.document) {
+                ui.msg.textContent = "⚠️ Lỗi: Không thể kết nối Office Context.";
+                return;
+            }
+
+            showLoader("Đang lấy kích thước Slide...");
+            
+            try {
+                await PowerPoint.run(async (context) => {
+                    // Lấy slide đầu tiên
+                    const slide = context.presentation.slides.getItemAt(0);
+                    slide.load("width, height");
+                    await context.sync();
+                    
+                    const width = slide.width;
+                    const height = slide.height;
+                    
+                    // Cập nhật Canvas theo kích thước Slide
+                    resizeCanvas(width, height);
+                    
+                    enableTools(true);
+                    ui.btnSetContext.disabled = true;
+                    ui.msg.textContent = `✅ Canvas đã được thiết lập: ${width.toFixed(0)} x ${height.toFixed(0)} px.`;
+                });
+            } catch (error) {
+                console.error("Lỗi khi lấy kích thước slide:", error);
+                ui.msg.textContent = "❌ Lỗi: Không thể đọc kích thước slide. Vui lòng thử lại.";
+                enableTools(false);
+            } finally {
+                hideLoader();
+            }
+        }
+        
+        // --- 4. TẢI VẬT LIỆU ---
+        document.getElementById('materialImageUpload').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                showLoader("Đang tải vật liệu...");
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                await new Promise(resolve => img.onload = resolve);
+                state.materialImage = await createImageBitmap(img);
+                
+                state.simParams.particleSize = Math.max(5, Math.min(15, img.naturalWidth / 5)); // Đặt kích thước hạt theo ảnh
+                
+                ui.msg.textContent = `✅ Đã tải ảnh vật liệu (${file.name}). Sẵn sàng vẽ Path.`;
+                hideLoader();
+                drawMain();
+            }
+        });
+
+        // --- 5. LOGIC VẼ PATH & VECTOR ---
+        
+        const getPos = (e) => {
+            const r = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / r.width;
+            const scaleY = canvas.height / r.height;
+            return {
+                x: (e.clientX - r.left) * scaleX,
+                y: (e.clientY - r.top) * scaleY
+            };
+        };
+
+        // Bắt đầu vẽ
+        canvas.addEventListener('mousedown', (e) => {
+            if (state.mode === 'idle') return;
+            state.isDrawing = true;
+            const pos = getPos(e);
+            
+            currentPath = {
+                type: state.mode,
+                points: [{ ...pos, angle: 0 }],
+                length: 0,
+                particlesSpawned: 0,
+                flowVector: null, // Chỉ dùng cho type='vector'
+                com: {x: pos.x, y: pos.y}, // Điểm trung tâm cho Vector
+            };
+        });
+
+        // Đang vẽ
+        canvas.addEventListener('mousemove', (e) => {
+            if (!state.isDrawing || state.mode === 'idle') return;
+            const pos = getPos(e);
+
+            const lastPoint = currentPath.points[currentPath.points.length - 1];
+            const dist = Math.hypot(pos.x - lastPoint.x, pos.y - lastPoint.y);
+
+            if (dist > 3) { // Giới hạn khoảng cách giữa các điểm
+                let angle = Math.atan2(pos.y - lastPoint.y, pos.x - lastPoint.x);
+                currentPath.points.push({ ...pos, angle });
+                currentPath.length += dist;
+            }
+            drawMain();
+        });
+
+        // Kết thúc vẽ
+        canvas.addEventListener('mouseup', () => {
+            if (!state.isDrawing || state.mode === 'idle' || !currentPath || currentPath.points.length < 2) {
+                state.isDrawing = false;
+                currentPath = null;
+                return;
+            }
+
+            if (state.mode === 'vector') {
+                // Đóng vùng vector
+                calcVector(currentPath);
+                state.paths.push(currentPath);
+                initParticles(currentPath); // Spawn hạt ban đầu
+                ui.msg.textContent = `✅ Đã tạo vùng Dòng chảy.`;
+            } else if (state.mode === 'line') {
+                // Lưu đường line
+                state.paths.push(currentPath);
+                ui.msg.textContent = `✅ Đã tạo Đường dẫn (Line).`;
+            }
+            
+            currentPath = null;
+            state.isDrawing = false;
+            setMode('idle');
+            drawMain();
+        });
+
+        // Gán vector lực cho vùng kín
+        function calcVector(path) {
+             // 1. Tính Center of Mass (COM)
+            let sumX = 0, sumY = 0;
+            for(const p of path.points) { sumX += p.x; sumY += p.y; }
+            path.com = { x: sumX / path.points.length, y: sumY / path.points.length };
+
+            // 2. TẠO TRƯỜNG VECTOR NGẪU NHIÊN 
+            const angle = Math.random() * Math.PI * 2;
+            path.flowVector = {
+                vx: Math.cos(angle) * state.simParams.vectorFlowSpeed,
+                vy: Math.sin(angle) * state.simParams.vectorFlowSpeed
+            };
+        }
+
+        // Kiểm tra Point-in-Polygon
+        function isPointInPath(point, path) {
+            if (path.type !== 'vector') return false;
+
+            let inside = false;
+            const points = path.points;
+            for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+                const xi = points[i].x, yi = points[i].y;
+                const xj = points[j].x, yj = points[j].y;
+
+                const intersect = ((yi > point.y) !== (yj > point.y))
+                    && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+
+        // --- 6. LOGIC HẠT (PARTICLES) ---
+
+        // Spawn một hạt mới
+        function spawnParticle(path) {
+            const startPoint = path.points[0];
+            const size = state.simParams.particleSize;
+            
+            // Tính vận tốc ban đầu dựa trên điểm đầu và điểm thứ 1 hoặc 2
+            let nextPoint = path.points[1] || path.points[0];
+            
+            const angle = Math.atan2(nextPoint.y - startPoint.y, nextPoint.x - startPoint.x);
+            
+            state.particles.push({
+                x: startPoint.x,
+                y: startPoint.y,
+                vx: Math.cos(angle) * state.simParams.lineSpeed, 
+                vy: Math.sin(angle) * state.simParams.lineSpeed,
+                pathIndex: 0, // Dùng cho Line: index của điểm đã đi qua
+                pathRef: path, // Tham chiếu đến path
+                life: state.simParams.particleLifetime, // Tuổi thọ
+                pathType: path.type, // Lưu lại loại path
+                size: size,
+                distanceTravelled: 0, // Theo dõi khoảng cách đã đi
+            });
+            path.particlesSpawned++;
+        }
+        
+        // Spawn hạt ban đầu (cũng dùng cho chế độ Vector để tạo hạt)
+        function initParticles(path) {
+            if (path.type === 'line') {
+                 // Spawn ngay lập tức vài hạt trên đường line
+                for (let i = 0; i < 5; i++) {
+                    // Spawn hạt với vị trí ngẫu nhiên trên đường line ban đầu
+                    const pointIndex = Math.floor(Math.random() * (path.points.length - 1));
+                    spawnParticle(path);
+                }
+            } else if (path.type === 'vector') {
+                 // Spawn ngẫu nhiên trong vùng Vector
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                for (const p of path.points) {
+                    minX = Math.min(minX, p.x);
+                    minY = Math.min(minY, p.y);
+                    maxX = Math.max(maxX, p.x);
+                    maxY = Math.max(maxY, p.y);
+                }
+                
+                const initialCount = 50;
+                for (let i = 0; i < initialCount; i++) {
+                    let attempts = 0;
+                    let p;
+                    do {
+                        p = {
+                            x: minX + Math.random() * (maxX - minX),
+                            y: minY + Math.random() * (maxY - minY)
+                        };
+                        attempts++;
+                    } while (!isPointInPath(p, path) && attempts < 100);
+                    
+                    if (isPointInPath(p, path)) {
+                        state.particles.push({
+                            ...p,
+                            vx: path.flowVector.vx, // Vận tốc ban đầu theo vector
+                            vy: path.flowVector.vy,
+                            pathRef: path,
+                            life: state.simParams.particleLifetime,
+                            pathType: path.type,
+                            size: state.simParams.particleSize,
+                        });
+                    }
+                }
+            }
+        }
+        
+        // --- 7. VÒNG LẶP MÔ PHỎNG (UPDATE & DRAW) ---
+
+        ui.btnSim.addEventListener('click', () => {
+            if (state.paths.length === 0) {
+                // Thay thế alert bằng UI thông báo
+                ui.msg.textContent = "⚠️ Vui lòng vẽ Đường dẫn hoặc Vùng Dòng chảy trước!";
+                return;
+            }
+            
+            state.isSimulating = !state.isSimulating;
+            ui.btnSim.textContent = state.isSimulating ? "⏸ TẠM DỪNG" : "▶ BẮT ĐẦU MÔ PHỎNG";
+            
+            if(state.isSimulating) loop();
+            else cancelAnimationFrame(animFrameId);
+        });
+
+        function loop(timestamp) {
+            if(!state.isSimulating) return;
+            if(!timestamp) timestamp = performance.now();
+            
+            const dt = timestamp - (state.lastFrameTime || timestamp);
+            state.lastFrameTime = timestamp;
+            state.time += dt;
+
+            update(dt);
+            drawMain();
+            animFrameId = requestAnimationFrame(loop);
+        }
+
+        // Cập nhật vị trí hạt
+        function update(dt) {
+            const dtSeconds = dt / 1000;
+
+            // 1. Spawn hạt mới (chỉ cho Line)
+            for (const path of state.paths.filter(p => p.type === 'line')) {
+                // Tần suất spawn: 1 hạt sau mỗi (1000 / spawnRate) ms
+                if (Math.random() * 1000 < state.simParams.spawnRate) {
+                    spawnParticle(path);
+                }
+            }
+
+            // 2. Cập nhật vị trí và trạng thái hạt
+            state.particles = state.particles.filter(particle => {
+                particle.life -= dt;
+
+                if (particle.life <= 0) return false; // Hạt hết tuổi thọ
+
+                if (particle.pathType === 'line') {
+                    // Logic di chuyển theo đường Line
+                    const path = particle.pathRef;
+                    
+                    // Điểm đích hiện tại
+                    const targetPoint = path.points[particle.pathIndex + 1];
+
+                    if (!targetPoint) return false; // Hạt đã đi hết đường
+
+                    // Tính toán vector hướng đến điểm đích
+                    const dx = targetPoint.x - particle.x;
+                    const dy = targetPoint.y - particle.y;
+                    const distanceToTarget = Math.hypot(dx, dy);
+
+                    if (distanceToTarget < 1) {
+                        // Đã đến điểm đích, chuyển sang điểm tiếp theo
+                        particle.pathIndex++;
+                        if (particle.pathIndex + 1 >= path.points.length) {
+                             // Hạt đi hết đường, kết thúc
+                             return false; 
+                        }
+                        const nextTarget = path.points[particle.pathIndex + 1];
+                        // Cập nhật vận tốc hướng về điểm mới
+                        const angle = Math.atan2(nextTarget.y - targetPoint.y, nextTarget.x - targetPoint.x);
+                        particle.vx = Math.cos(angle) * state.simParams.lineSpeed;
+                        particle.vy = Math.sin(angle) * state.simParams.lineSpeed;
+                    } else {
+                        // Di chuyển bình thường
+                        particle.x += particle.vx * dtSeconds;
+                        particle.y += particle.vy * dtSeconds;
+                    }
+                
+                } else if (particle.pathType === 'vector') {
+                    // Logic Dòng chảy (Vector Field)
+                    const path = particle.pathRef;
+
+                    if (isPointInPath(particle, path)) {
+                        // Áp dụng lực Dòng chảy
+                        particle.x += path.flowVector.vx * dtSeconds;
+                        particle.y += path.flowVector.vy * dtSeconds;
+
+                        // Giữ tuổi thọ để tạo hiệu ứng tuần hoàn
+                        particle.life = Math.min(particle.life + dt, state.simParams.particleLifetime);
+                    } else {
+                        // Hạt trôi ra ngoài vùng, giảm tốc
+                        particle.vx *= 0.95; 
+                        particle.vy *= 0.95;
+                        
+                        particle.x += particle.vx * dtSeconds;
+                        particle.y += particle.vy * dtSeconds;
+                    }
+                }
+                return true;
+            });
+            
+            // Giới hạn số lượng hạt
+            if (state.particles.length > state.simParams.maxParticles) {
+                state.particles = state.particles.slice(state.particles.length - state.simParams.maxParticles);
+            }
+        }
+
+        function drawMain() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Vẽ các Path/Vector (chỉ để xem, không xuất)
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            
+            for (const path of state.paths) {
+                ctx.beginPath();
+                ctx.moveTo(path.points[0].x, path.points[0].y);
+                
+                if (path.type === 'line') {
+                    ctx.strokeStyle = '#f90'; // Màu cam cho Line
+                } else if (path.type === 'vector') {
+                    ctx.strokeStyle = '#1a73e8'; // Màu xanh cho Vector
+                }
+                
+                for (let i = 1; i < path.points.length; i++) {
+                    ctx.lineTo(path.points[i].x, path.points[i].y);
+                }
+
+                if (path.type === 'vector') {
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(26, 115, 232, 0.1)';
+                    ctx.fill();
+                    
+                    // Vẽ vector chỉ hướng (Ví dụ: tại trung tâm vùng)
+                    if (path.flowVector) {
+                         const cx = path.com.x;
+                         const cy = path.com.y;
+                         
+                         const vx = path.flowVector.vx / 3; // Giảm độ dài hiển thị
+                         const vy = path.flowVector.vy / 3;
+                         
+                         ctx.strokeStyle = '#0a428c';
+                         ctx.lineWidth = 4;
+                         ctx.beginPath();
+                         ctx.moveTo(cx, cy);
+                         ctx.lineTo(cx + vx, cy + vy);
+                         ctx.stroke();
+                         // Vẽ đầu mũi tên
+                         drawArrowhead(ctx, cx + vx, cy + vy, Math.atan2(vy, vx), 10);
+                    }
+                }
+                
+                ctx.stroke();
+            }
+            
+            // Hàm vẽ đầu mũi tên
+            function drawArrowhead(ctx, x, y, angle, size) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.translate(x, y);
+                ctx.rotate(angle);
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-size, size / 2);
+                ctx.lineTo(-size, -size / 2);
+                ctx.closePath();
+                ctx.fillStyle = ctx.strokeStyle;
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 2. Vẽ nét đang vẽ
+            if (state.isDrawing && currentPath) {
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(currentPath.points[0].x, currentPath.points[0].y);
+                for (let i = 1; i < currentPath.points.length; i++) {
+                    ctx.lineTo(currentPath.points[i].x, currentPath.points[i].y);
+                }
+                ctx.stroke();
+            }
+
+            // 3. Vẽ Hạt (Particles)
+            for (const p of state.particles) {
+                ctx.globalAlpha = p.life / state.simParams.particleLifetime;
+                
+                if (state.materialImage) {
+                    ctx.drawImage(state.materialImage, p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+                } else {
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1; // Reset
+            }
+        }
+        
+        // --- 8. XUẤT FILE TÍCH HỢP POWERPOINT ---
+        
+        ui.btnExport.addEventListener('click', () => {
+            if (state.particles.length === 0) {
+                ui.msg.textContent = "⚠️ Vui lòng chạy mô phỏng và có hạt trên màn hình trước khi xuất!";
+                return;
+            }
+            exportFramesToPowerPoint();
+        });
+
+        async function exportFramesToPowerPoint() {
+            if (!Office.context.document) return;
+            
+            showLoader("Bắt đầu xuất khung hình (Frames)...");
+            
+            const wasSimulating = state.isSimulating;
+            state.isSimulating = false; // Tạm dừng vòng lặp requestAnimationFrame
+            
+            const frameCount = 60; // Số lượng frame xuất
+            const durationPerFrame = 50; // ms (20 FPS)
+            
+            try {
+                
+                await PowerPoint.run(async (context) => {
+                    // Lấy slide hiện tại, nếu không có, lấy slide đầu tiên
+                    const slide = context.presentation.slides.getItemAt(0);
+                    
+                    for (let i = 0; i < frameCount; i++) {
+                        showLoader(`Xuất Frame ${i + 1}/${frameCount} (20 FPS)...`);
+                        
+                        // 1. Cập nhật trạng thái mô phỏng
+                        update(durationPerFrame); 
+                        drawMain();
+                        
+                        // 2. Lấy Base64 của Canvas
+                        const imageDataUrl = canvas.toDataURL("image/png");
+                        const base64Image = imageDataUrl.split(',')[1];
+                        
+                        // 3. Chèn ảnh vào slide (overlay)
+                        // Hình ảnh sẽ được căn chỉnh đúng kích thước Slide (left: 0, top: 0)
+                        slide.shapes.addImage(base64Image, { 
+                            left: 0, 
+                            top: 0, 
+                            width: state.slideWidth, 
+                            height: state.slideHeight 
+                        });
+                        
+                        // Cần sync sau mỗi lần thêm hình ảnh (vì đây là một thao tác lớn)
+                        await context.sync(); 
+                    }
+                    
+                    // Thêm hướng dẫn vào slide cuối cùng
+                    const lastSlide = context.presentation.slides.getLast();
+                    lastSlide.shapes.addTextBox("Sau khi xuất xong, dùng chức năng 'File -> Export -> Create a Video' của PowerPoint để tạo file động (MP4/GIF).", { 
+                        left: 50, 
+                        top: state.slideHeight - 100, 
+                        width: 400, 
+                        height: 50
+                    });
+
+                    await context.sync();
+                });
+                
+                ui.msg.textContent = `✅ Đã xuất thành công ${frameCount} frame vào Slide! Vui lòng dùng chức năng "Export to Video" của PowerPoint.`;
+            
+            } catch (error) {
+                console.error("Lỗi xuất Frame:", error);
+                ui.msg.textContent = `❌ Lỗi xuất Frame: ${error.message}. Vui lòng kiểm tra Console log.`;
+            } finally {
+                // Khôi phục trạng thái mô phỏng
+                state.isSimulating = wasSimulating;
+                if (state.isSimulating) loop();
+                hideLoader();
+            }
+        }
+        
+        // --- 9. EVENT LISTENERS KHÁC ---
+        ui.btnLine.addEventListener('click', () => setMode('line'));
+        ui.btnVector.addEventListener('click', () => setMode('vector'));
+        ui.btnReset.addEventListener('click', () => {
+            state.paths = [];
+            state.particles = [];
+            if (maskCanvas.width > 0) {
+                 maskCtx.clearRect(0,0,maskCanvas.width, maskCanvas.height);
+            }
+            ui.msg.textContent = "🗑 Đã xóa tất cả Path và Hạt.";
+            drawMain();
+        });
+
+        // Khởi tạo Canvas (với kích thước mặc định)
+        resizeCanvas(state.slideWidth, state.slideHeight);
+    </script>
+</body>
+</html>
