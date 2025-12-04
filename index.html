@@ -265,7 +265,7 @@
             color: #4ecdc4;
         }
         
-        /* WARP MODAL */
+        /* WARP MODAL & SAVE MODAL */
         .warp-modal {
             display: none;
             position: fixed;
@@ -276,7 +276,7 @@
             padding: 25px;
             border-radius: 15px;
             z-index: 1001;
-            width: 550px; /* Tăng chiều rộng cho control mới */
+            width: 550px; 
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
             border: 1px solid rgba(78, 205, 196, 0.5);
             backdrop-filter: blur(10px);
@@ -393,24 +393,21 @@
         }
         
         /* New Control for Displacement Map */
-        .displacement-upload {
-            background: rgba(60, 60, 100, 0.8);
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
+        .displacement-control {
             grid-column: 1 / span 2;
         }
-        .displacement-upload button {
-            background-color: #e74c3c;
+        
+        /* Styling cho input trong modal save */
+        #exportFileName {
+            background-color: #2c3e50;
             color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.2s;
+            border: 1px solid #4ecdc4;
         }
-        .displacement-upload button:hover {
-            background-color: #c0392b;
+        
+        #exportFormat {
+            background-color: #2c3e50;
+            color: white;
+            border: 1px solid #4ecdc4;
         }
 
     </style>
@@ -437,6 +434,7 @@
                     <i class="fas fa-grip-lines"></i> Chọn Displacement Map
                 </button>
                 <input type="file" id="displacementFile" accept="image/*" hidden>
+                <p style="margin-top: 5px; font-size: 0.8em; color: #a9c7c7;">(Ảnh đen trắng, độ tương phản cao)</p>
             </div>
 
             <div class="section">
@@ -486,11 +484,11 @@
                         <i class="fas fa-arrow-down"></i>
                         <span>Ra Sau</span>
                     </button>
-                    <button class="tool-btn" id="zoomInBtn" title="Zoom In">
+                    <button class="tool-btn" id="zoomInBtn" title="Zoom In (Giữ Ctrl để Pan)">
                         <i class="fas fa-search-plus"></i>
                         <span>Zoom In</span>
                     </button>
-                    <button class="tool-btn" id="zoomOutBtn" title="Zoom Out">
+                    <button class="tool-btn" id="zoomOutBtn" title="Zoom Out (Giữ Ctrl để Pan)">
                         <i class="fas fa-search-minus"></i>
                         <span>Zoom Out</span>
                     </button>
@@ -507,7 +505,7 @@
                     <i class="fas fa-save"></i> Lưu & Xuất Ảnh
                 </button>
                 <div style="margin-top: 15px; color: #ccc; font-size: 0.9em;">
-                    <i class="fas fa-info-circle"></i> Hỗ trợ: PNG, JPG, PDF
+                    <i class="fas fa-info-circle"></i> Hỗ trợ: PNG, JPG (Đã sửa lỗi Export)
                 </div>
             </div>
 
@@ -527,11 +525,11 @@
                 </div>
                 
                 <div class="zoom-controls">
-                    <button class="zoom-btn" id="zoomInCanvas" title="Zoom In (vào trung tâm)">
+                    <button class="zoom-btn" id="zoomInCanvas" title="Zoom In">
                         <i class="fas fa-search-plus"></i>
                     </button>
                     <div class="zoom-display" id="zoomLevel">100%</div>
-                    <button class="zoom-btn" id="zoomOutCanvas" title="Zoom Out (từ trung tâm)">
+                    <button class="zoom-btn" id="zoomOutCanvas" title="Zoom Out">
                         <i class="fas fa-search-minus"></i>
                     </button>
                     <button class="zoom-btn zoom-reset" id="zoomResetCanvas" title="Reset Zoom">
@@ -546,15 +544,15 @@
                 </div>
                 <div class="canvas-info-item">
                     <i class="fas fa-arrows-alt"></i>
-                    <span>Kéo để di chuyển</span>
+                    <span>Giữ **Ctrl** + Kéo chuột để **Pan** (Di chuyển canvas khi zoom)</span>
                 </div>
                 <div class="canvas-info-item">
                     <i class="fas fa-search"></i>
-                    <span>Scroll để zoom theo chuột</span>
+                    <span>Scroll để **Zoom theo chuột**</span>
                 </div>
                 <div class="canvas-info-item">
                     <i class="fas fa-save"></i>
-                    <span>Ctrl+S để lưu, Ctrl+Z/Y để Undo/Redo</span>
+                    <span>Ctrl+Z/Y để Undo/Redo</span>
                 </div>
             </div>
         </div>
@@ -577,7 +575,7 @@
             
             <div class="warp-control">
                 <div class="control-label">
-                    <span>Độ Cong X</span>
+                    <span>Độ Cong X (Skew)</span>
                     <span class="control-value" id="warpXValue">0</span>
                 </div>
                 <input type="range" min="-50" max="50" value="0" class="warp-slider" id="warpXSlider">
@@ -585,7 +583,7 @@
             
             <div class="warp-control">
                 <div class="control-label">
-                    <span>Độ Cong Y</span>
+                    <span>Độ Cong Y (Skew)</span>
                     <span class="control-value" id="warpYValue">0</span>
                 </div>
                 <input type="range" min="-50" max="50" value="0" class="warp-slider" id="warpYSlider">
@@ -593,7 +591,7 @@
             
             <div class="warp-control">
                 <div class="control-label">
-                    <span>Độ Lồi</span>
+                    <span>Độ Lồi (Bulge)</span>
                     <span class="control-value" id="bulgeValue">0</span>
                 </div>
                 <input type="range" min="0" max="100" value="0" class="warp-slider" id="bulgeSlider">
@@ -601,7 +599,7 @@
             
             <div class="warp-control">
                 <div class="control-label">
-                    <span>Độ Lõm</span>
+                    <span>Độ Lõm (Pinch)</span>
                     <span class="control-value" id="pinchValue">0</span>
                 </div>
                 <input type="range" min="0" max="100" value="0" class="warp-slider" id="pinchSlider">
@@ -617,7 +615,7 @@
             
             <div class="warp-control">
                 <div class="control-label">
-                    <span>Độ Hòa Trộn</span>
+                    <span>Độ Hòa Trộn (Blend)</span>
                     <span class="control-value" id="blendValue">50</span>
                 </div>
                 <input type="range" min="0" max="100" value="50" class="warp-slider" id="blendSlider">
@@ -644,8 +642,33 @@
     </div>
 
     <div class="overlay" id="saveOverlay"></div>
-    <div class="save-options" id="saveModal">
+    <div class="warp-modal" id="saveModal" style="width: 400px; padding: 20px; z-index: 1002;">
+        <h3 class="save-header">
+            <i class="fas fa-download"></i> Xuất file Mockup
+        </h3>
+        <div class="warp-controls" style="grid-template-columns: 1fr;">
+            <div class="warp-control">
+                <div class="control-label">Định dạng file</div>
+                <select id="exportFormat" class="warp-slider" style="height: 40px; border-radius: 6px; padding: 5px;">
+                    <option value="png">PNG (Chất lượng cao)</option>
+                    <option value="jpeg">JPG (Kích thước nhỏ)</option>
+                </select>
+            </div>
+            <div class="warp-control">
+                <div class="control-label">Tên file</div>
+                <input type="text" id="exportFileName" value="mockup_k_pro" class="warp-slider" style="height: 40px; border-radius: 6px; padding: 5px;">
+            </div>
         </div>
+        <div class="modal-buttons">
+            <button class="modal-btn secondary" id="cancelSave">
+                <i class="fas fa-times"></i> Hủy
+            </button>
+            <button class="modal-btn primary" id="confirmSave">
+                <i class="fas fa-download"></i> Tải xuống
+            </button>
+        </div>
+    </div>
+
 
     <div class="status-bar">
         <div class="status-item">
@@ -690,6 +713,7 @@
         let displacementMap = null; // Biến mới cho Displacement Map
         let textures = [];
         let zoomLevel = 1;
+        let isPanning = false; // Biến mới cho Pan
         
         let warpSettings = {
             dispIntensity: 0, // Control mới
@@ -711,7 +735,6 @@
                 history = history.slice(0, historyIndex + 1);
             }
             
-            // toDatalessJSON giúp giảm kích thước history
             const state = canvas.toDatalessJSON(['globalCompositeOperation']);
             history.push(state);
             historyIndex++;
@@ -740,13 +763,63 @@
         canvas.on('object:modified', saveToHistory);
         canvas.on('object:added', saveToHistory);
         canvas.on('object:removed', saveToHistory);
-        // Ngăn chặn việc save history quá nhiều khi chỉ đang di chuyển
-        canvas.on('object:moving', () => updateStatus('Đang di chuyển...'));
 
-        // ========== CẬP NHẬT TRẠNG THÁI & ZOOM ==========
-        function updateStatus(message) {
-            document.getElementById('statusText').textContent = message;
-        }
+
+        // ========== NÂNG CẤP: ZOOM & PAN (Khắc phục lỗi mất hình) ==========
+        
+        // Bắt sự kiện khi nhấn và nhả chuột trên Canvas (Kích hoạt Pan)
+        canvas.on('mouse:down', function(opt) {
+            const evt = opt.e;
+            // Kích hoạt Pan khi nhấn Ctrl hoặc Alt
+            if (evt.ctrlKey || evt.altKey) { 
+                isPanning = true;
+                canvas.selection = false; // Tắt chọn đối tượng
+                canvas.lastPosX = evt.clientX;
+                canvas.lastPosY = evt.clientY;
+            }
+        });
+
+        canvas.on('mouse:move', function(opt) {
+            if (isPanning && zoomLevel > 1) { // Chỉ Pan khi đã zoom
+                const evt = opt.e;
+                const vpt = canvas.viewportTransform;
+                
+                vpt[4] += evt.clientX - canvas.lastPosX;
+                vpt[5] += evt.clientY - canvas.lastPosY;
+                canvas.requestRenderAll();
+                
+                canvas.lastPosX = evt.clientX;
+                canvas.lastPosY = evt.clientY;
+            }
+        });
+
+        canvas.on('mouse:up', function(opt) {
+            // Tắt Pan và Bật lại chọn đối tượng
+            isPanning = false;
+            canvas.selection = true; 
+        });
+
+        // Bắt sự kiện Scroll Wheel (Zoom theo con trỏ chuột)
+        canvas.on('mouse:wheel', function(opt) {
+            const delta = opt.e.deltaY;
+            let newZoom = zoomLevel;
+
+            if (delta > 0) {
+                newZoom /= 1.1; // Zoom Out
+            } else if (delta < 0) {
+                newZoom *= 1.1; // Zoom In
+            }
+
+            // Giới hạn zoom
+            newZoom = Math.min(5, Math.max(0.1, newZoom));
+            
+            // Zoom tại vị trí con trỏ chuột
+            canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, newZoom);
+            zoomLevel = newZoom;
+            updateZoomDisplay();
+            opt.e.preventDefault(); 
+            opt.e.stopPropagation();
+        });
 
         function updateZoomDisplay() {
             const percent = Math.round(zoomLevel * 100);
@@ -755,20 +828,24 @@
             canvas.renderAll();
         }
         
-        // (Giữ nguyên các hàm zoom: zoomToPoint, zoomIn, zoomOut, resetZoom và mouse:wheel event)
-
-        // Các hàm Zoom (đơn giản hóa)
-        document.getElementById('zoomInCanvas').addEventListener('click', () => zoomToPoint(canvas.getCenter(), zoomLevel * 1.2));
-        document.getElementById('zoomOutCanvas').addEventListener('click', () => zoomToPoint(canvas.getCenter(), zoomLevel * 0.8));
-        document.getElementById('zoomResetCanvas').addEventListener('click', resetZoom);
-        
         function zoomToPoint(point, newZoom) {
             zoomLevel = Math.min(5, Math.max(0.1, newZoom));
             canvas.zoomToPoint(point, zoomLevel);
             updateZoomDisplay();
         }
         
-        function resetZoom() { zoomToPoint(canvas.getCenter(), 1); updateStatus("Zoom đã reset về 100%"); }
+        function resetZoom() { 
+            // Reset Viewport Transform
+            canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+            zoomToPoint(canvas.getCenter(), 1); 
+            updateStatus("Zoom đã reset về 100%"); 
+        }
+
+        // Event listeners cho các nút Zoom/Reset
+        document.getElementById('zoomInCanvas').addEventListener('click', () => zoomToPoint(canvas.getCenter(), zoomLevel * 1.2));
+        document.getElementById('zoomOutCanvas').addEventListener('click', () => zoomToPoint(canvas.getCenter(), zoomLevel * 0.8));
+        document.getElementById('zoomResetCanvas').addEventListener('click', resetZoom);
+
 
         // ========== UPLOAD FUNCTIONS ==========
 
@@ -783,7 +860,7 @@
                     
                     fabric.Image.fromURL(event.target.result, function(img) {
                         mockupImage = img;
-                        mockupImage.set({ selectable: false, evented: false, hasControls: false, hasBorders: false });
+                        mockupImage.set({ selectable: false, evented: false, hasControls: false, hasBorders: false, name: 'mockup_bg' });
                         
                         const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.9;
                         
@@ -803,14 +880,13 @@
             }
         });
         
-        // 2. UPLOAD DISPLACEMENT MAP (MỚI)
+        // 2. UPLOAD DISPLACEMENT MAP
         document.getElementById('uploadDisplacementBtn').addEventListener('click', () => document.getElementById('displacementFile').click());
 
         document.getElementById('displacementFile').addEventListener('change', function(e) {
             if (e.target.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
-                    // Tạo một đối tượng Image ẩn để dùng cho glfx.js
                     const img = new Image();
                     img.onload = function() {
                         displacementMap = img;
@@ -854,7 +930,7 @@
             updateStatus(`Đã tải lên ${files.length} ảnh vật liệu`);
         });
 
-        // KÉO THẢ VÀO CANVAS (Cập nhật Blending Mode)
+        // KÉO THẢ VÀO CANVAS (Áp dụng Blending Mode)
         canvas.on('drop', function(event) {
             event.e.preventDefault();
             
@@ -884,7 +960,7 @@
                         borderColor: '#4ecdc4',
                         cornerSize: 12,
                         transparentCorners: false,
-                        name: 'texture' // Thêm tên để dễ quản lý
+                        name: 'texture' 
                     });
                     
                     canvas.add(img);
@@ -900,6 +976,7 @@
         
         // ========== 4. FIT THEO BỀ MẶT NÂNG CAO ==========
         document.getElementById('fitSurfaceBtn').addEventListener('click', function() {
+            // (Giữ logic cũ)
             const activeObj = canvas.getActiveObject();
             if (!activeObj || !mockupImage) {
                 updateStatus('Cần có mockup và vật liệu để fit bề mặt');
@@ -948,7 +1025,6 @@
             warpOverlay.classList.add('active');
             updateStatus('Đang mở công cụ Warp bề mặt');
             
-            // Cập nhật trạng thái Displacement Map
             if (displacementMap) {
                  updateStatus('Displacement Map sẵn sàng. Kéo slider "Cường độ Displacement Map" để biến dạng theo nếp nhăn!');
             } else {
@@ -956,7 +1032,7 @@
             }
         });
 
-        // Cập nhật giá trị warp (chỉ cập nhật giá trị, không preview GLFX)
+        // Logic cập nhật slider (Giữ nguyên)
         const warpSliders = ['dispIntensitySlider', 'warpXSlider', 'warpYSlider', 'bulgeSlider', 'pinchSlider', 'waveSlider', 'blendSlider'];
         const warpValues = ['dispIntensityValue', 'warpXValue', 'warpYValue', 'bulgeValue', 'pinchValue', 'waveValue', 'blendValue'];
         
@@ -971,7 +1047,7 @@
             });
         });
 
-        // Presets warp
+        // Presets warp (Giữ nguyên)
         document.querySelectorAll('.warp-preset').forEach(btn => {
             btn.addEventListener('click', function() {
                 const preset = this.dataset.preset;
@@ -982,7 +1058,7 @@
                         break;
                     case 'displacement':
                          setWarpPreset(50, 0, 0, 0, 0, 0, 70);
-                         break; // Preset Displacement Map
+                         break;
                     case 'wave':
                         setWarpPreset(0, 10, 10, 0, 0, 70, 70);
                         break;
@@ -1030,7 +1106,7 @@
             
             const { dispIntensity, warpX, warpY, bulge, pinch, wave, blend } = warpSettings;
             
-            const dispFactor = dispIntensity / 100 * 0.15; // Cường độ Displacement
+            const dispFactor = dispIntensity / 100 * 0.15; 
             const bulgeFactor = bulge / 100 * 0.5; 
             const pinchFactor = pinch / 100 * 0.3;
             const waveFactor = wave / 100 * 0.1;
@@ -1039,7 +1115,7 @@
             const imgElement = obj.getElement();
             
             try {
-                 // 1. Sử dụng GLFX.js cho biến dạng (Asynchronous)
+                 // 1. Sử dụng GLFX.js cho biến dạng
                 const fxCanvas = fx.canvas();
                 const texture = fxCanvas.texture(imgElement);
                 
@@ -1048,7 +1124,6 @@
                 // Displacement Mapping
                 if (dispFactor > 0 && displacementMap) {
                     const displacementTexture = fxCanvas.texture(displacementMap);
-                    // heightField là hàm displacement mapping của glfx
                     fxCanvas.heightField(displacementTexture, dispFactor).update();
                 }
                 
@@ -1078,12 +1153,13 @@
                         scaleX: obj.scaleX,
                         scaleY: obj.scaleY,
                         angle: obj.angle,
-                        skewX: obj.skewX + warpX * 0.3, // Thêm Skew
-                        skewY: obj.skewY + warpY * 0.3, // Thêm Skew
+                        skewX: obj.skewX + warpX * 0.3,
+                        skewY: obj.skewY + warpY * 0.3,
                         
                         // Áp dụng Blending Mode và Độ trong suốt
-                        globalCompositeOperation: 'overlay', // Thay đổi sang Overlay để blend tốt hơn
+                        globalCompositeOperation: 'soft-light', // Soft-light blend tốt hơn Overlay
                         opacity: Math.max(0.6, 1 - (1 - blendFactor) * 0.4),
+                        name: 'texture',
                         
                         // Bóng đổ cho chiều sâu 3D
                         shadow: new fabric.Shadow({
@@ -1126,44 +1202,7 @@
             warpOverlay.classList.remove('active');
         }
 
-        // ========== 6. PHỐI CẢNH 3D NÂNG CAO ==========
-        document.getElementById('perspectiveBtn').addEventListener('click', function() {
-            const activeObj = canvas.getActiveObject();
-            if (!activeObj) {
-                updateStatus('Vui lòng chọn đối tượng cần tạo phối cảnh');
-                return;
-            }
-            
-            activeObj.set({
-                // Biến dạng phối cảnh
-                skewX: activeObj.skewX + 15,
-                skewY: activeObj.skewY - 10,
-                
-                // Thay đổi tỷ lệ và xoay
-                scaleX: activeObj.scaleX * 0.9,
-                scaleY: activeObj.scaleY * 0.85,
-                angle: activeObj.angle + 5,
-                
-                // Đổ bóng cho hiệu ứng 3D
-                shadow: new fabric.Shadow({
-                    color: 'rgba(0,0,0,0.4)',
-                    blur: 20,
-                    offsetX: 10,
-                    offsetY: 10
-                }),
-                
-                // Blending Mode mạnh mẽ
-                globalCompositeOperation: 'soft-light',
-                opacity: 0.85
-            });
-            
-            activeObj.setCoords();
-            canvas.renderAll();
-            updateStatus('Đã áp dụng hiệu ứng phối cảnh 3D');
-            saveToHistory();
-        });
-
-        // ========== 7. AUTO CÂN MÀU NÂNG CAO (Nâng cấp Color Matrix) ==========
+        // ========== 7. AUTO CÂN MÀU NÂNG CAO ==========
         document.getElementById('autoColorBtn').addEventListener('click', function() {
             const activeObj = canvas.getActiveObject();
             if (!activeObj || !mockupImage) {
@@ -1173,43 +1212,30 @@
             
             updateStatus('Đang phân tích và cân màu nâng cao...');
             
-            // Phân tích độ sáng mockup (Simple Luminance Analysis)
-            // (Thực tế, CamanJS hoặc WebGL là cách tốt nhất, nhưng ta dùng cách này để giữ code đơn giản)
-            
-            // Giả định độ sáng trung bình của mockup là 0.6 (khá sáng)
-            const avgLuminance = 0.6; // Thay thế bằng giá trị phân tích nếu cần
+            const avgLuminance = 0.6; // Giá trị tham chiếu
             
             const targetBrightness = (0.5 - avgLuminance) * 0.1; 
             const targetContrast = (avgLuminance - 0.5) * 0.2; 
             
-            // Nâng cấp: Sử dụng Color Matrix để điều chỉnh màu sắc chi tiết hơn
             activeObj.filters = [
-                // Filter ánh sáng
                 new fabric.Image.filters.Brightness({ brightness: targetBrightness + 0.05 }),
                 new fabric.Image.filters.Contrast({ contrast: targetContrast + 0.1 }),
-                
-                // Giảm nhẹ Saturation (độ bão hòa)
                 new fabric.Image.filters.Saturation({ saturation: -0.15 }),
-                
-                // Filter BlendColor: Mô phỏng bóng đổ/màu môi trường (Multiply Black)
                 new fabric.Image.filters.BlendColor({
                     color: '#000000', 
                     mode: 'multiply', 
                     alpha: 0.15
                 }),
-                
-                // Filter Color Matrix cho hiệu ứng tổng thể: Tăng Contrast nhẹ
                 new fabric.Image.filters.ColorMatrix({
                     matrix: [
-                        1.05, 0, 0, 0, 0,    // R (Tăng 5%)
-                        0, 1.05, 0, 0, 0,    // G
-                        0, 0, 1.05, 0, 0,    // B
-                        0, 0, 0, 1, 0        // A
+                        1.05, 0, 0, 0, 0,    
+                        0, 1.05, 0, 0, 0,    
+                        0, 0, 1.05, 0, 0,    
+                        0, 0, 0, 1, 0        
                     ]
                 })
             ];
             
-            // Chuyển sang Blending Mode Soft-Light để hấp thụ màu sắc
             activeObj.set({ globalCompositeOperation: 'soft-light' }); 
             
             activeObj.applyFilters();
@@ -1218,7 +1244,86 @@
             saveToHistory();
         });
 
+
+        // ========== CHỨC NĂNG LƯU/XUẤT FILE NÂNG CẤP (KHẮC PHỤC LỖI EXPORT) ==========
+        const saveModal = document.getElementById('saveModal');
+        const saveOverlay = document.getElementById('saveOverlay');
+        
+        document.getElementById('saveBtn').addEventListener('click', function() {
+            saveModal.classList.add('active');
+            saveOverlay.classList.add('active');
+            updateStatus('Mở hộp thoại xuất file');
+        });
+
+        document.getElementById('cancelSave').addEventListener('click', closeSaveModal);
+        saveOverlay.addEventListener('click', closeSaveModal);
+
+        function closeSaveModal() {
+            saveModal.classList.remove('active');
+            saveOverlay.classList.remove('active');
+        }
+
+        document.getElementById('confirmSave').addEventListener('click', function() {
+            const format = document.getElementById('exportFormat').value;
+            const fileName = document.getElementById('exportFileName').value || 'mockup_k_pro';
+            
+            updateStatus('Đang tạo hình ảnh xuất file, vui lòng chờ...');
+            
+            // 1. Lưu trạng thái zoom và viewport hiện tại
+            const originalVpt = [...canvas.viewportTransform];
+            const originalZoom = zoomLevel;
+            
+            // 2. Tạm thời reset zoom/pan để Canvas.toDataURL chụp toàn bộ
+            canvas.setZoom(1);
+            canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+            
+            // 3. Ẩn Controls và bỏ chọn đối tượng
+            canvas.discardActiveObject(); 
+            canvas.getObjects().forEach(obj => {
+                obj.hasControls = false;
+                obj.hasBorders = false;
+            });
+            canvas.renderAll();
+
+            // 4. Chuyển Canvas sang Data URL (Chụp ảnh)
+            const dataURL = canvas.toDataURL({
+                format: format,
+                quality: 0.95
+            });
+
+            // 5. Khôi phục trạng thái Canvas (Asynchronous - dùng setTimeout để đảm bảo)
+            setTimeout(() => {
+                canvas.setViewportTransform(originalVpt);
+                canvas.setZoom(originalZoom);
+                zoomLevel = originalZoom;
+                updateZoomDisplay();
+                
+                // Khôi phục Controls cho các đối tượng có thể chọn
+                canvas.getObjects().forEach(obj => {
+                    if (obj.name === 'texture') {
+                        obj.hasControls = true;
+                        obj.hasBorders = true;
+                    }
+                });
+                canvas.renderAll();
+                
+                // 6. Tải file xuống
+                const link = document.createElement('a');
+                link.href = dataURL;
+                link.download = `${fileName}.${format}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                updateStatus(`Đã xuất file ${fileName}.${format} thành công!`);
+                closeSaveModal();
+
+            }, 50); 
+        });
+
         // ========== CÁC CÔNG CỤ KHÁC (Giữ nguyên) ==========
+        
+        // (Giữ nguyên các hàm: removeBtn, bringFrontBtn, sendBackBtn, undo/redo, transformBtn...)
         document.getElementById('removeBtn').addEventListener('click', function() {
             const activeObj = canvas.getActiveObject();
             if (activeObj && activeObj !== mockupImage) {
@@ -1229,7 +1334,6 @@
             }
         });
 
-        // (Giữ nguyên các hàm bringFrontBtn, sendBackBtn, undo/redo...)
         document.getElementById('bringFrontBtn').addEventListener('click', function() {
             const activeObj = canvas.getActiveObject();
             if (activeObj) {
@@ -1276,7 +1380,6 @@
             }
         });
 
-        // Transform (Ctrl+T)
          document.getElementById('transformBtn').addEventListener('click', function() {
             const activeObj = canvas.getActiveObject();
             if (activeObj) {
@@ -1293,10 +1396,9 @@
         });
 
 
-        // ========== PHÍM TẮT & THEO DÕI ĐỐI TƯỢNG (Giữ nguyên) ==========
+        // ========== PHÍM TẮT & THEO DÕI ĐỐI TƯỢNG ==========
         document.addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.key === 't') { e.preventDefault(); document.getElementById('transformBtn').click(); }
-            if (e.ctrlKey && e.key === 's') { e.preventDefault(); /* document.getElementById('saveBtn').click(); */ }
             if (e.ctrlKey && e.key === 'z') { e.preventDefault(); document.getElementById('undoBtn').click(); }
             if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'Z')) { e.preventDefault(); document.getElementById('redoBtn').click(); }
             if (e.ctrlKey && e.key === 'w') { e.preventDefault(); document.getElementById('warpSurfaceBtn').click(); }
