@@ -469,6 +469,45 @@
             border: 1px solid #4ecdc4;
         }
 
+        /* Công cụ vẽ/xóa tự do */
+        .drawing-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(30, 30, 50, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .drawing-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .drawing-control label {
+            color: #4ecdc4;
+            font-size: 0.9em;
+            min-width: 60px;
+        }
+
+        .drawing-control input {
+            width: 80px;
+        }
+
+        .drawing-color-picker {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #4ecdc4;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #4ecdc4;
+        }
+
     </style>
 </head>
 <body>
@@ -520,6 +559,18 @@
                         <i class="fas fa-hand-paper"></i>
                         <span>Bàn Tay</span>
                     </button> 
+                    
+                    <!-- THÊM NÚT VẼ VÀ XÓA TỰ DO -->
+                    <button class="tool-btn" id="drawBtn" title="Vẽ tự do (D)">
+                        <i class="fas fa-pencil-alt"></i>
+                        <span>Vẽ Tự Do</span>
+                    </button>
+                    
+                    <button class="tool-btn" id="eraseBtn" title="Xóa tự do (E)">
+                        <i class="fas fa-eraser"></i>
+                        <span>Xóa Tự Do</span>
+                    </button>
+                    <!-- KẾT THÚC PHẦN THÊM -->
                     
                     <button class="tool-btn" id="fitSurfaceBtn">
                         <i class="fas fa-crop-alt"></i>
@@ -580,6 +631,27 @@
             <div class="canvas-container">
                 <canvas id="main-canvas"></canvas>
                 
+                <!-- THÊM BẢNG ĐIỀU KHIỂN VẼ/XÓA -->
+                <div class="drawing-controls" id="drawingControls" style="display: none;">
+                    <div class="drawing-control">
+                        <label>Màu vẽ:</label>
+                        <input type="color" id="drawingColor" value="#4ecdc4" class="drawing-color-picker">
+                    </div>
+                    <div class="drawing-control">
+                        <label>Độ rộng:</label>
+                        <input type="range" id="drawingWidth" min="1" max="50" value="5">
+                        <span id="drawingWidthValue" style="color: white; min-width: 20px;">5px</span>
+                    </div>
+                    <div class="drawing-control">
+                        <label>Độ mờ:</label>
+                        <input type="range" id="drawingOpacity" min="0" max="100" value="100">
+                        <span id="drawingOpacityValue" style="color: white; min-width: 30px;">100%</span>
+                    </div>
+                    <button class="history-btn" id="clearDrawing" style="margin-top: 5px;">
+                        <i class="fas fa-broom"></i> Xóa nét vẽ
+                    </button>
+                </div>
+                
                 <div class="history-controls">
                     <button class="history-btn" id="undoBtn" title="Undo (Ctrl+Z)">
                         <i class="fas fa-undo"></i>
@@ -618,6 +690,11 @@
                 <div class="canvas-info-item">
                     <i class="fas fa-save"></i>
                     <span>Ctrl+Z/Y để Undo/Redo</span>
+                </div>
+                <!-- THÊM HƯỚNG DẪN VẼ/XÓA -->
+                <div class="canvas-info-item">
+                    <i class="fas fa-pencil-alt"></i>
+                    <span>Nhấn **D** để vẽ tự do, **E** để xóa tự do</span>
                 </div>
             </div>
         </div>
@@ -759,6 +836,11 @@
             <i class="fas fa-history"></i>
             <span>History: <span id="historyStatus">0/0</span></span>
         </div>
+        <!-- THÊM TRẠNG THÁI CÔNG CỤ VẼ -->
+        <div class="status-item">
+            <i class="fas fa-pencil-alt"></i>
+            <span>Công cụ: <span id="drawingToolStatus">Select</span></span>
+        </div>
     </div>
 
     <script>
@@ -785,7 +867,15 @@
         let displacementMap = null; 
         let textures = [];
         let zoomLevel = 1;
-        let currentToolMode = 'select'; // NEW: Default mode is select (Chọn/Transform)
+        let currentToolMode = 'select'; // 'select', 'hand', 'draw', 'erase'
+        
+        // Biến cho công cụ vẽ
+        let isDrawingMode = false;
+        let drawingBrush = {
+            color: '#4ecdc4',
+            width: 5,
+            opacity: 1.0
+        };
         
         let warpSettings = {
             dispIntensity: 0, 
@@ -836,9 +926,149 @@
         canvas.on('object:added', saveToHistory);
         canvas.on('object:removed', saveToHistory);
 
+        // ========== CÔNG CỤ VẼ VÀ XÓA TỰ DO ==========
+        function activateDrawingMode() {
+            currentToolMode = 'draw';
+            canvas.isDrawingMode = true;
+            canvas.selection = false;
+            
+            // Cấu hình brush cho vẽ
+            canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+            canvas.freeDrawingBrush.color = drawingBrush.color;
+            canvas.freeDrawingBrush.width = drawingBrush.width;
+            canvas.freeDrawingBrush.opacity = drawingBrush.opacity;
+            
+            // Hiển thị bảng điều khiển vẽ
+            document.getElementById('drawingControls').style.display = 'flex';
+            
+            updateToolButtons();
+            updateStatus('Chế độ vẽ tự do - Kéo chuột để vẽ');
+            updateDrawingToolStatus('Vẽ tự do');
+        }
+        
+        function activateErasingMode() {
+            currentToolMode = 'erase';
+            canvas.isDrawingMode = true;
+            canvas.selection = false;
+            
+            // Cấu hình brush cho xóa (sử dụng màu với globalCompositeOperation)
+            canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+            // Sử dụng màu trắng với chế độ destination-out để xóa
+            canvas.freeDrawingBrush.color = 'rgba(255, 255, 255, 1)';
+            canvas.freeDrawingBrush.width = drawingBrush.width;
+            canvas.freeDrawingBrush.opacity = 1.0;
+            
+            // Ghi đè phương thức _render để sử dụng globalCompositeOperation
+            const originalRender = canvas.freeDrawingBrush._render;
+            canvas.freeDrawingBrush._render = function() {
+                const ctx = this.canvas.contextTop;
+                ctx.globalCompositeOperation = 'destination-out';
+                originalRender.call(this);
+                ctx.globalCompositeOperation = 'source-over';
+            };
+            
+            // Hiển thị bảng điều khiển vẽ
+            document.getElementById('drawingControls').style.display = 'flex';
+            
+            updateToolButtons();
+            updateStatus('Chế độ xóa tự do - Kéo chuột để xóa');
+            updateDrawingToolStatus('Xóa tự do');
+        }
+        
+        function deactivateDrawingMode() {
+            canvas.isDrawingMode = false;
+            canvas.selection = true;
+            
+            // Ẩn bảng điều khiển vẽ
+            document.getElementById('drawingControls').style.display = 'none';
+            
+            // Reset brush về mặc định
+            if (canvas.freeDrawingBrush && canvas.freeDrawingBrush._render) {
+                delete canvas.freeDrawingBrush._render;
+            }
+        }
+        
+        function updateDrawingToolStatus(toolName) {
+            document.getElementById('drawingToolStatus').textContent = toolName;
+            document.getElementById('drawingToolStatus').style.color = '#4ecdc4';
+        }
+        
+        // Sự kiện cho nút vẽ
+        document.getElementById('drawBtn').addEventListener('click', function() {
+            if (currentToolMode === 'draw') {
+                setToolMode('select');
+            } else {
+                setToolMode('draw');
+            }
+        });
+        
+        // Sự kiện cho nút xóa
+        document.getElementById('eraseBtn').addEventListener('click', function() {
+            if (currentToolMode === 'erase') {
+                setToolMode('select');
+            } else {
+                setToolMode('erase');
+            }
+        });
+        
+        // Cập nhật màu vẽ
+        document.getElementById('drawingColor').addEventListener('input', function(e) {
+            drawingBrush.color = e.target.value;
+            if (currentToolMode === 'draw') {
+                canvas.freeDrawingBrush.color = drawingBrush.color;
+            }
+            // Cập nhật màu của color picker
+            e.target.style.background = drawingBrush.color;
+        });
+        
+        // Cập nhật độ rộng nét vẽ
+        document.getElementById('drawingWidth').addEventListener('input', function(e) {
+            drawingBrush.width = parseInt(e.target.value);
+            document.getElementById('drawingWidthValue').textContent = drawingBrush.width + 'px';
+            
+            if (currentToolMode === 'draw' || currentToolMode === 'erase') {
+                canvas.freeDrawingBrush.width = drawingBrush.width;
+            }
+        });
+        
+        // Cập nhật độ mờ
+        document.getElementById('drawingOpacity').addEventListener('input', function(e) {
+            drawingBrush.opacity = parseInt(e.target.value) / 100;
+            document.getElementById('drawingOpacityValue').textContent = e.target.value + '%';
+            
+            if (currentToolMode === 'draw') {
+                canvas.freeDrawingBrush.opacity = drawingBrush.opacity;
+            }
+        });
+        
+        // Xóa tất cả nét vẽ
+        document.getElementById('clearDrawing').addEventListener('click', function() {
+            const drawingObjects = canvas.getObjects().filter(obj => 
+                obj.type === 'path' && obj.name === 'free_drawing'
+            );
+            
+            drawingObjects.forEach(obj => {
+                canvas.remove(obj);
+            });
+            
+            canvas.renderAll();
+            saveToHistory();
+            updateStatus('Đã xóa tất cả nét vẽ');
+        });
+        
+        // Đánh dấu các đối tượng vẽ tự do
+        canvas.on('path:created', function(e) {
+            e.path.name = 'free_drawing';
+            saveToHistory();
+        });
 
-        // ========== CHUYỂN ĐỔI CÔNG CỤ (SELECT/HAND) ==========
+        // ========== CHUYỂN ĐỔI CÔNG CỤ (SELECT/HAND/DRAW/ERASE) ==========
         function setToolMode(mode) {
+            // Tắt chế độ vẽ hiện tại nếu có
+            if (currentToolMode === 'draw' || currentToolMode === 'erase') {
+                deactivateDrawingMode();
+            }
+            
             currentToolMode = mode;
             
             // Xóa trạng thái active của tất cả các nút công cụ
@@ -848,16 +1078,24 @@
 
             if (mode === 'hand') {
                 document.getElementById('handToolBtn').classList.add('active-tool');
-                canvas.selection = false; // Tắt chọn đối tượng
+                canvas.selection = false;
                 canvas.defaultCursor = 'grab';
                 canvas.hoverCursor = 'grab';
                 updateStatus('Chế độ Bàn Tay (Pan) được kích hoạt');
+                updateDrawingToolStatus('Bàn tay');
+            } else if (mode === 'draw') {
+                document.getElementById('drawBtn').classList.add('active-tool');
+                activateDrawingMode();
+            } else if (mode === 'erase') {
+                document.getElementById('eraseBtn').classList.add('active-tool');
+                activateErasingMode();
             } else { // mode === 'select'
                 document.getElementById('transformBtn').classList.add('active-tool');
-                canvas.selection = true; // Bật lại chọn đối tượng
+                canvas.selection = true;
                 canvas.defaultCursor = 'default';
                 canvas.hoverCursor = 'move';
                 updateStatus('Chế độ Select/Transform được kích hoạt');
+                updateDrawingToolStatus('Select');
             }
             canvas.renderAll();
         }
@@ -865,6 +1103,10 @@
         document.getElementById('handToolBtn').addEventListener('click', () => setToolMode('hand'));
         document.getElementById('transformBtn').addEventListener('click', () => setToolMode('select'));
 
+        // Cập nhật hàm updateToolButtons (nếu cần)
+        function updateToolButtons() {
+            // Đã xử lý trong setToolMode
+        }
 
         // ========== NÂNG CẤP: ZOOM & PAN (Khắc phục lỗi mất hình Lần 2) ==========
         let isPanning = false;
@@ -872,6 +1114,11 @@
         // Bắt sự kiện khi nhấn và nhả chuột trên Canvas (Kích hoạt Pan)
         canvas.on('mouse:down', function(opt) {
             const evt = opt.e;
+            // Không pan nếu đang ở chế độ vẽ/xóa
+            if (currentToolMode === 'draw' || currentToolMode === 'erase') {
+                return;
+            }
+            
             // Kích hoạt Pan khi nhấn Ctrl/Alt HOẶC khi đang ở chế độ Hand
             if (evt.ctrlKey || evt.altKey || currentToolMode === 'hand') { 
                 isPanning = true;
@@ -937,7 +1184,6 @@
             }
         }
 
-
         // Bắt sự kiện Scroll Wheel (Zoom theo con trỏ chuột)
         canvas.on('mouse:wheel', function(opt) {
             const delta = opt.e.deltaY;
@@ -991,9 +1237,7 @@
         document.getElementById('zoomOutCanvas').addEventListener('click', () => zoomToPoint(canvas.getCenter(), zoomLevel * 0.8));
         document.getElementById('zoomResetCanvas').addEventListener('click', resetZoom);
 
-
         // ========== UPLOAD FUNCTIONS (Giữ nguyên) ==========
-
         // 1. UPLOAD MOCKUP
         document.getElementById('uploadMockupBtn').addEventListener('click', () => document.getElementById('mockupFile').click());
 
@@ -1050,7 +1294,7 @@
             const files = Array.from(e.target.files);
             const thumbnailsContainer = document.getElementById('textureThumbnails');
             
-            files.forEach((file, index) => {
+            files.forEach((file, index) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     textures.push({
@@ -1601,6 +1845,24 @@
                 e.preventDefault(); 
                 setToolMode('select');
             }
+            // Phím tắt D: Vẽ tự do
+            else if (e.key.toLowerCase() === 'd') { 
+                e.preventDefault(); 
+                if (currentToolMode === 'draw') {
+                    setToolMode('select');
+                } else {
+                    setToolMode('draw');
+                }
+            }
+            // Phím tắt E: Xóa tự do
+            else if (e.key.toLowerCase() === 'e') { 
+                e.preventDefault(); 
+                if (currentToolMode === 'erase') {
+                    setToolMode('select');
+                } else {
+                    setToolMode('erase');
+                }
+            }
             
             if (e.ctrlKey && e.key === 'z') { e.preventDefault(); document.getElementById('undoBtn').click(); }
             if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'Z')) { e.preventDefault(); document.getElementById('redoBtn').click(); }
@@ -1639,6 +1901,9 @@
         updateSelectedObject();
         updateHistoryButtons();
         updateHistoryStatus();
+        
+        // Khởi tạo màu cho color picker
+        document.getElementById('drawingColor').style.background = drawingBrush.color;
         
         setTimeout(() => {
             saveToHistory();
