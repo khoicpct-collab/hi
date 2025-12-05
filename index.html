@@ -442,9 +442,9 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5); /* Giảm opacity xuống 0.5 */
+            background: rgba(0, 0, 0, 0.5);
             z-index: 1000;
-            backdrop-filter: blur(2px); /* Thêm hiệu ứng blur nhẹ */
+            backdrop-filter: blur(2px);
         }
 
         .overlay.active {
@@ -1103,12 +1103,7 @@
         document.getElementById('handToolBtn').addEventListener('click', () => setToolMode('hand'));
         document.getElementById('transformBtn').addEventListener('click', () => setToolMode('select'));
 
-        // Cập nhật hàm updateToolButtons (nếu cần)
-        function updateToolButtons() {
-            // Đã xử lý trong setToolMode
-        }
-
-        // ========== NÂNG CẤP: ZOOM & PAN (Khắc phục lỗi mất hình Lần 2) ==========
+        // ========== NÂNG CẤP: ZOOM & PAN ==========
         let isPanning = false;
 
         // Bắt sự kiện khi nhấn và nhả chuột trên Canvas (Kích hoạt Pan)
@@ -1126,21 +1121,21 @@
                 canvas.lastPosX = evt.clientX;
                 canvas.lastPosY = evt.clientY;
                 if (currentToolMode === 'hand') {
-                    canvas.defaultCursor = 'grabbing'; // Thay đổi con trỏ
+                    canvas.defaultCursor = 'grabbing';
                 }
             }
         });
 
         canvas.on('mouse:move', function(opt) {
-            if (isPanning && zoomLevel >= 1) { // Chỉ Pan khi đã zoom (>= 100%)
+            if (isPanning && zoomLevel >= 1) {
                 const evt = opt.e;
                 const vpt = canvas.viewportTransform;
                 
                 vpt[4] += evt.clientX - canvas.lastPosX;
                 vpt[5] += evt.clientY - canvas.lastPosY;
                 
-                // Giới hạn Pan để không bị trôi vô hạn
-                limitPan(vpt); 
+                // Giới hạn Pan
+                limitPan(vpt);
 
                 canvas.requestRenderAll();
                 
@@ -1155,7 +1150,7 @@
                 canvas.selection = true;
                 canvas.defaultCursor = 'default';
             } else if (currentToolMode === 'hand') {
-                 canvas.defaultCursor = 'grab'; // Trở lại bàn tay chưa nắm
+                 canvas.defaultCursor = 'grab';
                  canvas.selection = false; 
             }
             canvas.setViewportTransform(canvas.viewportTransform); 
@@ -1165,18 +1160,15 @@
         function limitPan(vpt) {
             const viewportWidth = canvas.getWidth();
             const viewportHeight = canvas.getHeight();
-            // Điều chỉnh biên độ giới hạn
             const maxOffsetX = viewportWidth * (zoomLevel - 1) * 0.5;
             const maxOffsetY = viewportHeight * (zoomLevel - 1) * 0.5;
 
-            // Giới hạn dịch chuyển X
             if (vpt[4] > maxOffsetX) {
                 vpt[4] = maxOffsetX;
             } else if (vpt[4] < -maxOffsetX) {
                 vpt[4] = -maxOffsetX;
             }
 
-            // Giới hạn dịch chuyển Y
             if (vpt[5] > maxOffsetY) {
                 vpt[5] = maxOffsetY;
             } else if (vpt[5] < -maxOffsetY) {
@@ -1190,19 +1182,16 @@
             let newZoom = zoomLevel;
 
             if (delta > 0) {
-                newZoom /= 1.1; // Zoom Out
+                newZoom /= 1.1;
             } else if (delta < 0) {
-                newZoom *= 1.1; // Zoom In
+                newZoom *= 1.1;
             }
 
-            // Giới hạn zoom
             newZoom = Math.min(5, Math.max(0.1, newZoom));
             
-            // Zoom tại vị trí con trỏ chuột
             canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, newZoom);
             zoomLevel = newZoom;
             
-            // Sau khi zoom, điều chỉnh lại VPT để đảm bảo không bị trôi
             limitPan(canvas.viewportTransform);
 
             updateZoomDisplay();
@@ -1224,7 +1213,6 @@
         }
         
         function resetZoom() { 
-            // Reset Viewport Transform
             canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
             zoomLevel = 1;
             canvas.setZoom(1);
@@ -1232,24 +1220,36 @@
             updateStatus("Zoom đã reset về 100%"); 
         }
 
-        // Event listeners cho các nút Zoom/Reset
         document.getElementById('zoomInCanvas').addEventListener('click', () => zoomToPoint(canvas.getCenter(), zoomLevel * 1.2));
         document.getElementById('zoomOutCanvas').addEventListener('click', () => zoomToPoint(canvas.getCenter(), zoomLevel * 0.8));
         document.getElementById('zoomResetCanvas').addEventListener('click', resetZoom);
 
-        // ========== UPLOAD FUNCTIONS (Giữ nguyên) ==========
+        // ========== UPLOAD FUNCTIONS (ĐÃ SỬA LỖI) ==========
         // 1. UPLOAD MOCKUP
-        document.getElementById('uploadMockupBtn').addEventListener('click', () => document.getElementById('mockupFile').click());
+        document.getElementById('uploadMockupBtn').addEventListener('click', function() {
+            console.log('Upload mockup clicked');
+            document.getElementById('mockupFile').click();
+        });
 
         document.getElementById('mockupFile').addEventListener('change', function(e) {
-            if (e.target.files[0]) {
+            console.log('Mockup file selected');
+            if (e.target.files && e.target.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
-                    if (mockupImage) canvas.remove(mockupImage);
+                    console.log('Mockup file loaded');
+                    if (mockupImage) {
+                        canvas.remove(mockupImage);
+                    }
                     
                     fabric.Image.fromURL(event.target.result, function(img) {
                         mockupImage = img;
-                        mockupImage.set({ selectable: false, evented: false, hasControls: false, hasBorders: false, name: 'mockup_bg' });
+                        mockupImage.set({ 
+                            selectable: false, 
+                            evented: false, 
+                            hasControls: false, 
+                            hasBorders: false, 
+                            name: 'mockup_bg' 
+                        });
                         
                         const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.9;
                         
@@ -1270,12 +1270,17 @@
         });
         
         // 2. UPLOAD DISPLACEMENT MAP
-        document.getElementById('uploadDisplacementBtn').addEventListener('click', () => document.getElementById('displacementFile').click());
+        document.getElementById('uploadDisplacementBtn').addEventListener('click', function() {
+            console.log('Upload displacement clicked');
+            document.getElementById('displacementFile').click();
+        });
 
         document.getElementById('displacementFile').addEventListener('change', function(e) {
-            if (e.target.files[0]) {
+            console.log('Displacement file selected');
+            if (e.target.files && e.target.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
+                    console.log('Displacement file loaded');
                     const img = new Image();
                     img.onload = function() {
                         displacementMap = img;
@@ -1288,13 +1293,17 @@
         });
 
         // 3. UPLOAD VẬT LIỆU
-        document.getElementById('uploadTextureBtn').addEventListener('click', () => document.getElementById('textureFiles').click());
+        document.getElementById('uploadTextureBtn').addEventListener('click', function() {
+            console.log('Upload texture clicked');
+            document.getElementById('textureFiles').click();
+        });
 
         document.getElementById('textureFiles').addEventListener('change', function(e) {
+            console.log('Texture files selected');
             const files = Array.from(e.target.files);
             const thumbnailsContainer = document.getElementById('textureThumbnails');
             
-            files.forEach((file, index) {
+            files.forEach((file, index) => {
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     textures.push({
@@ -1319,8 +1328,13 @@
             updateStatus(`Đã tải lên ${files.length} ảnh vật liệu`);
         });
 
-        // KÉO THẢ VÀO CANVAS (Áp dụng Blending Mode)
+        // KÉO THẢ VÀO CANVAS (ĐÃ SỬA LỖI - THÊM ĐIỀU KIỆN CHẾ ĐỘ VẼ/XÓA)
         canvas.on('drop', function(event) {
+            // Không xử lý drop nếu đang ở chế độ vẽ/xóa
+            if (currentToolMode === 'draw' || currentToolMode === 'erase') {
+                return;
+            }
+            
             event.e.preventDefault();
             
             const textureIndex = event.e.dataTransfer.getData('textureIndex');
@@ -1338,10 +1352,7 @@
                         top: event.e.offsetY - (img.height * scale) / 2,
                         scaleX: scale,
                         scaleY: scale,
-                        
-                        // Áp dụng Blending Mode mặc định cho hòa trộn chân thực
                         globalCompositeOperation: 'multiply', 
-                        
                         hasControls: true,
                         hasBorders: true,
                         cornerStyle: 'circle',
@@ -1361,7 +1372,9 @@
             }
         });
 
-        canvas.on('dragover', function(event) { event.e.preventDefault(); });
+        canvas.on('dragover', function(event) { 
+            event.e.preventDefault(); 
+        });
         
         // ========== 4. FIT THEO BỀ MẶT NÂNG CAO ==========
         document.getElementById('fitSurfaceBtn').addEventListener('click', function() {
@@ -1408,12 +1421,11 @@
         let modalDragOffsetX = 0;
         let modalDragOffsetY = 0;
 
-        // Thêm sự kiện cho header modal để kéo di chuyển
         const modalHeader = warpModal.querySelector('.modal-header');
         modalHeader.addEventListener('mousedown', startDraggingModal);
 
         function startDraggingModal(e) {
-            if (e.target.closest('.close-modal-btn')) return; // Không kéo khi nhấn nút đóng
+            if (e.target.closest('.close-modal-btn')) return;
             
             isDraggingModal = true;
             
@@ -1431,17 +1443,15 @@
             
             e.preventDefault();
             
-            // Tính toán vị trí mới
             const newLeft = e.clientX - modalDragOffsetX;
             const newTop = e.clientY - modalDragOffsetY;
             
-            // Giới hạn modal trong màn hình
             const maxX = window.innerWidth - warpModal.offsetWidth;
             const maxY = window.innerHeight - warpModal.offsetHeight;
             
             warpModal.style.left = Math.min(Math.max(0, newLeft), maxX) + 'px';
             warpModal.style.top = Math.min(Math.max(0, newTop), maxY) + 'px';
-            warpModal.style.right = 'auto'; // Bỏ right khi kéo
+            warpModal.style.right = 'auto';
         }
 
         function stopDraggingModal() {
@@ -1451,7 +1461,6 @@
             document.removeEventListener('mouseup', stopDraggingModal);
         }
 
-        // Thêm sự kiện cho nút đóng modal mới
         document.getElementById('closeWarpModal').addEventListener('click', closeWarpModal);
         
         document.getElementById('warpSurfaceBtn').addEventListener('click', function() {
@@ -1460,7 +1469,6 @@
                 return;
             }
             
-            // Đặt modal ở góc trên bên phải để không che ảnh
             warpModal.style.left = 'auto';
             warpModal.style.right = '20px';
             warpModal.style.top = '20px';
@@ -1476,7 +1484,7 @@
             }
         });
 
-        // Logic cập nhật slider (Giữ nguyên)
+        // Logic cập nhật slider
         const warpSliders = ['dispIntensitySlider', 'warpXSlider', 'warpYSlider', 'bulgeSlider', 'pinchSlider', 'waveSlider', 'blendSlider'];
         const warpValues = ['dispIntensityValue', 'warpXValue', 'warpYValue', 'bulgeValue', 'pinchValue', 'waveValue', 'blendValue'];
         
@@ -1491,7 +1499,7 @@
             });
         });
 
-        // Presets warp (Giữ nguyên)
+        // Presets warp
         document.querySelectorAll('.warp-preset').forEach(btn => {
             btn.addEventListener('click', function() {
                 const preset = this.dataset.preset;
@@ -1503,9 +1511,6 @@
                     case 'displacement':
                          setWarpPreset(50, 0, 0, 0, 0, 0, 70);
                          break;
-                    case 'wave':
-                        setWarpPreset(0, 10, 10, 0, 0, 70, 70);
-                        break;
                     case 'bulge':
                         setWarpPreset(0, 0, 0, 80, 0, 0, 50);
                         break;
@@ -1542,7 +1547,7 @@
             document.getElementById('blendValue').textContent = blend;
         }
 
-        // Áp dụng warp thực tế (Hàm cốt lõi - Nâng cấp sử dụng Displacement Map)
+        // Áp dụng warp thực tế
         function applyWarpToObject(obj) {
             if (!obj || obj.getElement().tagName !== 'IMG') return;
             
@@ -1559,19 +1564,16 @@
             const imgElement = obj.getElement();
             
             try {
-                 // 1. Sử dụng GLFX.js cho biến dạng
                 const fxCanvas = fx.canvas();
                 const texture = fxCanvas.texture(imgElement);
                 
                 fxCanvas.draw(texture).update();
                 
-                // Displacement Mapping
                 if (dispFactor > 0 && displacementMap) {
                     const displacementTexture = fxCanvas.texture(displacementMap);
                     fxCanvas.heightField(displacementTexture, dispFactor).update();
                 }
                 
-                // Bulge/Pinch
                 const center = [0.5, 0.5];
                 if (bulgeFactor > 0) {
                     fxCanvas.bulgePinch(center[0], center[1], bulgeFactor, 0.9).update();
@@ -1580,16 +1582,13 @@
                     fxCanvas.bulgePinch(center[0], center[1], -pinchFactor, 0.9).update();
                 }
                 
-                // Swirl/Wave
                 if (waveFactor > 0) {
                     fxCanvas.swirl(center[0], center[1], waveFactor * 0.5, 0.5).update();
                 }
                 
-                // 2. Tải lại ảnh đã Warp vào Fabric Object
                 const warpedUrl = fxCanvas.toDataURL();
                 
                 fabric.Image.fromURL(warpedUrl, function(warpedImg) {
-                    // Sao chép lại trạng thái transform và vị trí
                     warpedImg.set({
                         ...originalState,
                         left: obj.left,
@@ -1599,13 +1598,9 @@
                         angle: obj.angle,
                         skewX: obj.skewX + warpX * 0.3,
                         skewY: obj.skewY + warpY * 0.3,
-                        
-                        // Áp dụng Blending Mode và Độ trong suốt
-                        globalCompositeOperation: 'soft-light', // Soft-light blend tốt hơn Overlay
+                        globalCompositeOperation: 'soft-light',
                         opacity: Math.max(0.6, 1 - (1 - blendFactor) * 0.4),
                         name: 'texture',
-                        
-                        // Bóng đổ cho chiều sâu 3D
                         shadow: new fabric.Shadow({
                             color: `rgba(0,0,0,${0.2 + blendFactor * 0.3})`,
                             blur: 10 + bulge * 0.5,
@@ -1614,7 +1609,6 @@
                         })
                     });
                     
-                    // 3. Thay thế đối tượng cũ bằng đối tượng mới
                     canvas.remove(obj);
                     canvas.add(warpedImg);
                     canvas.setActiveObject(warpedImg);
@@ -1646,21 +1640,43 @@
             warpOverlay.classList.remove('active');
         }
 
-        // ========== 7. AUTO CÂN MÀU NÂNG CAO ==========
+        // ========== 7. AUTO CÂN MÀU NÂNG CAO (ĐÃ SỬA LỖI) ==========
         document.getElementById('autoColorBtn').addEventListener('click', function() {
+            console.log('Auto color button clicked');
+            
+            // Chuyển về chế độ select nếu đang ở chế độ vẽ/xóa
+            if (currentToolMode === 'draw' || currentToolMode === 'erase') {
+                setToolMode('select');
+            }
+            
             const activeObj = canvas.getActiveObject();
-            if (!activeObj || !mockupImage) {
-                updateStatus('Cần có mockup và đối tượng để cân màu');
+            console.log('Active object:', activeObj);
+            
+            if (!activeObj) {
+                updateStatus('Vui lòng chọn một đối tượng để cân màu');
+                return;
+            }
+            
+            if (!mockupImage) {
+                updateStatus('Cần có mockup để cân màu');
+                return;
+            }
+            
+            // Kiểm tra nếu đối tượng không phải là ảnh thì bỏ qua
+            if (!(activeObj instanceof fabric.Image)) {
+                updateStatus('Vui lòng chọn một hình ảnh để cân màu');
                 return;
             }
             
             updateStatus('Đang phân tích và cân màu nâng cao...');
             
-            const avgLuminance = 0.6; // Giá trị tham chiếu
+            // Lấy màu trung bình từ mockup (đơn giản hóa)
+            const avgLuminance = 0.6;
             
             const targetBrightness = (0.5 - avgLuminance) * 0.1; 
             const targetContrast = (avgLuminance - 0.5) * 0.2; 
             
+            // Áp dụng các bộ lọc màu
             activeObj.filters = [
                 new fabric.Image.filters.Brightness({ brightness: targetBrightness + 0.05 }),
                 new fabric.Image.filters.Contrast({ contrast: targetContrast + 0.1 }),
@@ -1680,7 +1696,7 @@
                 })
             ];
             
-            activeObj.set({ globalCompositeOperation: 'soft-light' }); 
+            activeObj.set({ globalCompositeOperation: 'soft-light' });
             
             activeObj.applyFilters();
             canvas.renderAll();
@@ -1688,8 +1704,7 @@
             saveToHistory();
         });
 
-
-        // ========== CHỨC NĂNG LƯU/XUẤT FILE NÂNG CẤP (KHẮC PHỤC LỖI EXPORT) ==========
+        // ========== CHỨC NĂNG LƯU/XUẤT FILE ==========
         const saveModal = document.getElementById('saveModal');
         const saveOverlay = document.getElementById('saveOverlay');
         
@@ -1713,40 +1728,31 @@
             
             updateStatus('Đang tạo hình ảnh xuất file, vui lòng chờ...');
             
-            // 1. Lưu trạng thái zoom và viewport hiện tại
             const originalVpt = [...canvas.viewportTransform];
             const originalZoom = zoomLevel;
             
-            // 2. Tạm thời reset zoom/pan để Canvas.toDataURL chụp toàn bộ
             canvas.discardActiveObject(); 
             
-            // Tắt controls/borders
             canvas.getObjects().forEach(obj => {
                 obj.hasControls = false;
                 obj.hasBorders = false;
             });
             
-            // Thực hiện Reset
             canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
             canvas.setZoom(1);
             canvas.renderAll();
 
-            // 3. Chuyển Canvas sang Data URL (Chụp ảnh)
             const dataURL = canvas.toDataURL({
                 format: format,
                 quality: 0.95
             });
 
-            // 4. Khôi phục trạng thái Canvas và Controls
-            // Sử dụng setTimeout 50ms để đảm bảo DataURL đã được tạo trước khi restore
             setTimeout(() => {
-                // Khôi phục Viewport và Zoom
                 canvas.setViewportTransform(originalVpt);
                 canvas.setZoom(originalZoom);
                 zoomLevel = originalZoom;
                 updateZoomDisplay();
                 
-                // Khôi phục Controls
                 canvas.getObjects().forEach(obj => {
                     if (obj.name === 'texture') {
                         obj.hasControls = true;
@@ -1755,7 +1761,6 @@
                 });
                 canvas.renderAll();
                 
-                // 5. Tải file xuống
                 const link = document.createElement('a');
                 link.href = dataURL;
                 link.download = `${fileName}.${format}`;
@@ -1769,10 +1774,7 @@
             }, 50); 
         });
 
-
-        // ========== CÁC CÔNG CỤ KHÁC (Giữ nguyên) ==========
-        
-        // (Giữ nguyên các hàm: removeBtn, bringFrontBtn, sendBackBtn, undo/redo, transformBtn...)
+        // ========== CÁC CÔNG CỤ KHÁC ==========
         document.getElementById('removeBtn').addEventListener('click', function() {
             const activeObj = canvas.getActiveObject();
             if (activeObj && activeObj !== mockupImage) {
@@ -1829,47 +1831,37 @@
             }
         });
 
-        // Thay đổi logic Transform/Select để dùng setToolMode
-        document.getElementById('transformBtn').addEventListener('click', () => setToolMode('select'));
-
-
         // ========== PHÍM TẮT & THEO DÕI ĐỐI TƯỢNG ==========
         document.addEventListener('keydown', function(e) {
-            // Phím tắt H: Bàn Tay
             if (e.key.toLowerCase() === 'h' && currentToolMode !== 'hand') { 
                 e.preventDefault(); 
                 setToolMode('hand');
-            } 
-            // Phím tắt Esc/Ctrl+T: Select/Transform
-            else if (e.key === 'Escape' || (e.ctrlKey && e.key === 't')) { 
+            } else if (e.key === 'Escape' || (e.ctrlKey && e.key === 't')) { 
                 e.preventDefault(); 
                 setToolMode('select');
-            }
-            // Phím tắt D: Vẽ tự do
-            else if (e.key.toLowerCase() === 'd') { 
+            } else if (e.key.toLowerCase() === 'd') { 
                 e.preventDefault(); 
                 if (currentToolMode === 'draw') {
                     setToolMode('select');
                 } else {
                     setToolMode('draw');
                 }
-            }
-            // Phím tắt E: Xóa tự do
-            else if (e.key.toLowerCase() === 'e') { 
+            } else if (e.key.toLowerCase() === 'e') { 
                 e.preventDefault(); 
                 if (currentToolMode === 'erase') {
                     setToolMode('select');
                 } else {
                     setToolMode('erase');
                 }
-            }
-            
-            if (e.ctrlKey && e.key === 'z') { e.preventDefault(); document.getElementById('undoBtn').click(); }
-            if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'Z')) { e.preventDefault(); document.getElementById('redoBtn').click(); }
-            // Phím Delete/Backspace để xóa
-            if (e.key === 'Delete' || e.key === 'Backspace') {
-                 e.preventDefault(); 
-                 document.getElementById('removeBtn').click(); 
+            } else if (e.ctrlKey && e.key === 'z') { 
+                e.preventDefault(); 
+                document.getElementById('undoBtn').click(); 
+            } else if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'Z')) { 
+                e.preventDefault(); 
+                document.getElementById('redoBtn').click(); 
+            } else if (e.key === 'Delete' || e.key === 'Backspace') {
+                e.preventDefault(); 
+                document.getElementById('removeBtn').click(); 
             }
         });
 
@@ -1891,11 +1883,11 @@
         }
         
         function updateStatus(message) {
-             document.getElementById('statusText').textContent = message;
+            document.getElementById('statusText').textContent = message;
         }
 
         // ========== KHỞI TẠO ==========
-        setToolMode('select'); // Đảm bảo chế độ Select là mặc định
+        setToolMode('select');
         updateZoomDisplay();
         updateStatus('Sẵn sàng - Tải mockup và ảnh vật liệu để bắt đầu');
         updateSelectedObject();
