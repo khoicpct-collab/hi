@@ -276,34 +276,71 @@
         .warp-modal {
             display: none;
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(30, 30, 50, 0.95);
-            padding: 25px;
-            border-radius: 15px;
             z-index: 1001;
-            width: 550px; 
+            background: rgba(30, 30, 50, 0.95);
+            padding: 15px;
+            border-radius: 12px;
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
             border: 1px solid rgba(78, 205, 196, 0.5);
             backdrop-filter: blur(10px);
+            cursor: move;
+            user-select: none;
+            max-height: 85vh;
+            overflow-y: auto;
         }
 
         .warp-modal.active {
             display: block;
         }
 
+        /* Modal header có thể kéo */
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(78, 205, 196, 0.3);
+            cursor: grab;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #4ecdc4;
+            font-size: 1.1em;
+        }
+
+        .close-modal-btn {
+            background: none;
+            border: none;
+            color: #4ecdc4;
+            font-size: 18px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .close-modal-btn:hover {
+            background: rgba(78, 205, 196, 0.2);
+            color: #fff;
+        }
+
         .warp-controls {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin: 20px 0;
+            gap: 12px;
+            margin: 15px 0;
         }
 
         .warp-control {
             background: rgba(60, 60, 100, 0.8);
-            padding: 15px;
-            border-radius: 10px;
+            padding: 12px;
+            border-radius: 8px;
         }
 
         .control-label {
@@ -312,6 +349,7 @@
             margin-bottom: 8px;
             color: #4ecdc4;
             font-weight: 600;
+            font-size: 0.9em;
         }
 
         .control-value {
@@ -319,6 +357,7 @@
             font-weight: bold;
             min-width: 40px;
             text-align: right;
+            font-size: 0.9em;
         }
 
         .warp-slider {
@@ -329,20 +368,20 @@
         .warp-presets {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            gap: 8px;
             margin: 15px 0;
         }
 
         .warp-preset {
-            padding: 12px;
+            padding: 10px;
             background: rgba(60, 60, 100, 0.8);
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             color: white;
             cursor: pointer;
             transition: all 0.3s;
             text-align: center;
-            font-size: 0.9em;
+            font-size: 0.85em;
         }
 
         .warp-preset:hover {
@@ -354,7 +393,7 @@
             display: flex;
             justify-content: flex-end;
             gap: 10px;
-            margin-top: 20px;
+            margin-top: 15px;
         }
 
         .modal-btn {
@@ -364,6 +403,7 @@
             font-weight: bold;
             cursor: pointer;
             transition: background-color 0.3s;
+            font-size: 0.9em;
         }
 
         .modal-btn.primary {
@@ -384,6 +424,16 @@
             background-color: #47627a;
         }
 
+        /* Nút "Hoàn thành" */
+        .modal-btn.complete {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .modal-btn.complete:hover {
+            background-color: #219955;
+        }
+
         .overlay {
             display: none;
             position: fixed;
@@ -391,8 +441,9 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.5); /* Giảm opacity xuống 0.5 */
             z-index: 1000;
+            backdrop-filter: blur(2px); /* Thêm hiệu ứng blur nhẹ */
         }
 
         .overlay.active {
@@ -572,10 +623,15 @@
     </div>
 
     <div class="overlay" id="warpOverlay"></div>
-    <div class="warp-modal" id="warpModal">
-        <h3 class="save-header">
-            <i class="fas fa-wave-square"></i> Warp Bề Mặt Nâng Cao
-        </h3>
+    <div class="warp-modal" id="warpModal" style="width: 500px; top: 20px; right: 20px;">
+        <div class="modal-header">
+            <h3 class="save-header">
+                <i class="fas fa-wave-square"></i> Warp Bề Mặt Nâng Cao
+            </h3>
+            <button class="close-modal-btn" id="closeWarpModal" title="Đóng">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
         
         <div class="warp-controls">
              <div class="warp-control displacement-control">
@@ -648,8 +704,8 @@
             <button class="modal-btn secondary" id="cancelWarp">
                 <i class="fas fa-times"></i> Hủy
             </button>
-            <button class="modal-btn primary" id="applyWarp">
-                <i class="fas fa-check"></i> Áp Dụng
+            <button class="modal-btn primary complete" id="applyWarp">
+                <i class="fas fa-check"></i> Hoàn Thành
             </button>
         </div>
     </div>
@@ -991,7 +1047,7 @@
             const files = Array.from(e.target.files);
             const thumbnailsContainer = document.getElementById('textureThumbnails');
             
-            files.forEach((file, index) => {
+            files.forEach((file, index) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     textures.push({
@@ -1100,11 +1156,67 @@
         const warpModal = document.getElementById('warpModal');
         const warpOverlay = document.getElementById('warpOverlay');
         
+        // ========== MODAL DI CHUYỂN ĐƯỢC ==========
+        let isDraggingModal = false;
+        let modalDragOffsetX = 0;
+        let modalDragOffsetY = 0;
+
+        // Thêm sự kiện cho header modal để kéo di chuyển
+        const modalHeader = warpModal.querySelector('.modal-header');
+        modalHeader.addEventListener('mousedown', startDraggingModal);
+
+        function startDraggingModal(e) {
+            if (e.target.closest('.close-modal-btn')) return; // Không kéo khi nhấn nút đóng
+            
+            isDraggingModal = true;
+            
+            const modalRect = warpModal.getBoundingClientRect();
+            modalDragOffsetX = e.clientX - modalRect.left;
+            modalDragOffsetY = e.clientY - modalRect.top;
+            
+            warpModal.style.cursor = 'grabbing';
+            document.addEventListener('mousemove', dragModal);
+            document.addEventListener('mouseup', stopDraggingModal);
+        }
+
+        function dragModal(e) {
+            if (!isDraggingModal) return;
+            
+            e.preventDefault();
+            
+            // Tính toán vị trí mới
+            const newLeft = e.clientX - modalDragOffsetX;
+            const newTop = e.clientY - modalDragOffsetY;
+            
+            // Giới hạn modal trong màn hình
+            const maxX = window.innerWidth - warpModal.offsetWidth;
+            const maxY = window.innerHeight - warpModal.offsetHeight;
+            
+            warpModal.style.left = Math.min(Math.max(0, newLeft), maxX) + 'px';
+            warpModal.style.top = Math.min(Math.max(0, newTop), maxY) + 'px';
+            warpModal.style.right = 'auto'; // Bỏ right khi kéo
+        }
+
+        function stopDraggingModal() {
+            isDraggingModal = false;
+            warpModal.style.cursor = 'move';
+            document.removeEventListener('mousemove', dragModal);
+            document.removeEventListener('mouseup', stopDraggingModal);
+        }
+
+        // Thêm sự kiện cho nút đóng modal mới
+        document.getElementById('closeWarpModal').addEventListener('click', closeWarpModal);
+        
         document.getElementById('warpSurfaceBtn').addEventListener('click', function() {
             if (!canvas.getActiveObject() || canvas.getActiveObject() === mockupImage) {
                 updateStatus('Vui lòng chọn đối tượng cần warp');
                 return;
             }
+            
+            // Đặt modal ở góc trên bên phải để không che ảnh
+            warpModal.style.left = 'auto';
+            warpModal.style.right = '20px';
+            warpModal.style.top = '20px';
             
             warpModal.classList.add('active');
             warpOverlay.classList.add('active');
